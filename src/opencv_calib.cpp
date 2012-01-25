@@ -10,10 +10,7 @@
 #include <opencv2/highgui/highgui.hpp>
 
 using namespace cv;
-
 using namespace std;
-
-
 
 void help()
 
@@ -218,33 +215,19 @@ public:
 public: 
 
     Size boardSize;            // The size of the board -> Number of items by width and height
-
     Pattern calibrationPattern;// One of the Chessboard, circles, or asymmetric circle pattern
-
     float squareSize;          // The size of a square in your defined unit (point, millimeter,etc).
-
     int nrFrames;              // The number of frames to use from the input for calibration
-
     float aspectRatio;         // The aspect ratio
-
     int delay;                 // In case of a video input 
-
     bool bwritePoints;         //  Write detected feature points
-
     bool bwriteExtrinsics;     // Write extrinsic parameters
-
     bool calibZeroTangentDist; // Assume zero tangential distortion
-
     bool calibFixPrincipalPoint;// Fix the principal point at the center
-
     bool flipVertical;          // Flip the captured images around the horizontal axis
-
     string outputFileName;      // The name of the file where to write
-
     bool showUndistorsed;       // Show undistorted images after calibration
-
     string input;               // The input ->      
-    
     int cameraID;
 
     vector<string> imageList;
@@ -255,7 +238,6 @@ public:
 
     bool goodInput; 
     int flag;
-
 
 private: 
 
