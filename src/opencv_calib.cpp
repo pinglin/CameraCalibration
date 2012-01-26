@@ -267,10 +267,8 @@ void read(const FileNode& node, Settings& x, const Settings& default_value = Set
 
 
 enum { DETECTION = 0, CAPTURING = 1, CALIBRATED = 2 };
-
 bool runCalibrationAndSave(Settings& s, Size imageSize, Mat&  cameraMatrix, Mat& distCoeffs,
                            vector<vector<Point2f> > imagePoints );
-
 
 int main(int argc, char* argv[])
 {
@@ -299,12 +297,8 @@ int main(int argc, char* argv[])
 
     }
 
-    
-
     vector<vector<Point2f> > imagePoints;
-
     Mat cameraMatrix, distCoeffs;
-
     Size imageSize;
 
     int mode = s.inputType == Settings::IMAGE_LIST ? CAPTURING : DETECTION;
@@ -320,9 +314,7 @@ int main(int argc, char* argv[])
     {
 
         Mat view;
-
         bool blinkOutput = false;
-
         view = s.nextImage();
 
         //-----  If no more image, or got enough, then stop calibration and show result -------------
@@ -339,7 +331,6 @@ int main(int argc, char* argv[])
         {
 
             if( imagePoints.size() > 0 )
-
                 runCalibrationAndSave(s, imageSize,  cameraMatrix, distCoeffs, imagePoints);
 
             break;
@@ -361,22 +352,16 @@ int main(int argc, char* argv[])
             {
 
             case Settings::CHESSBOARD:
-
                 found = findChessboardCorners(view, s.boardSize, pointBuf,
                                               CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FAST_CHECK | CV_CALIB_CB_NORMALIZE_IMAGE);
-
                 break;
 
             case Settings::CIRCLES_GRID:
-
                 found = findCirclesGrid( view, s.boardSize, pointBuf );
-
                 break;
 
             case Settings::ASYMMETRIC_CIRCLES_GRID:
-
                 found = findCirclesGrid( view, s.boardSize, pointBuf, CALIB_CB_ASYMMETRIC_GRID );
-
                 break;
 
             default:
@@ -386,7 +371,7 @@ int main(int argc, char* argv[])
 
 
 
-            if ( found)                // If done with success,
+            if (found)                // If done with success,
             {
 
                 // improve the found corners' coordinate accuracy for chessboard
@@ -473,8 +458,8 @@ int main(int argc, char* argv[])
 
         Mat view, rview, map1, map2;
         initUndistortRectifyMap(cameraMatrix, distCoeffs, Mat(),
-            getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, 1, imageSize, 0),
-            imageSize, CV_16SC2, map1, map2);
+                                getOptimalNewCameraMatrix(cameraMatrix, distCoeffs, imageSize, 1, imageSize, 0),
+                                imageSize, CV_16SC2, map1, map2);
 
         for(int i = 0; i < (int)s.imageList.size(); i++ )
         {
@@ -541,41 +526,25 @@ double computeReprojectionErrors( const vector<vector<Point3f> >& objectPoints,
 
 
 void calcBoardCornerPositions(Size boardSize, float squareSize, vector<Point3f>& corners, 
-
-                          Settings::Pattern patternType /*= Settings::CHESSBOARD*/)
-
+                              Settings::Pattern patternType /*= Settings::CHESSBOARD*/)
 {
 
     corners.clear();
 
-
-
     switch(patternType)
-
     {
 
     case Settings::CHESSBOARD:
-
     case Settings::CIRCLES_GRID:
-
         for( int i = 0; i < boardSize.height; ++i )
-
             for( int j = 0; j < boardSize.width; ++j )
-
                 corners.push_back(Point3f(float( j*squareSize ), float( i*squareSize ), 0));
-
         break;
 
-
-
     case Settings::ASYMMETRIC_CIRCLES_GRID:
-
         for( int i = 0; i < boardSize.height; i++ )
-
             for( int j = 0; j < boardSize.width; j++ )
-
                 corners.push_back(Point3f(float((2*j + i % 2)*squareSize), float(i*squareSize), 0));
-
         break;
 
     default:
@@ -584,8 +553,6 @@ void calcBoardCornerPositions(Size boardSize, float squareSize, vector<Point3f>&
     }
 
 }
-
-
 
 bool runCalibration(Settings& s, Size& imageSize, Mat& cameraMatrix, Mat& distCoeffs,
                     vector<vector<Point2f> > imagePoints, vector<Mat>& rvecs, vector<Mat>& tvecs,
@@ -717,7 +684,7 @@ void saveCameraParams(Settings& s, Size& imageSize, Mat& cameraMatrix, Mat& dist
 
 
 
-bool runCalibrationAndSave(Settings& s, Size imageSize, Mat&  cameraMatrix, Mat& distCoeffs,vector<vector<Point2f> > imagePoints )
+bool runCalibrationAndSave(Settings& s, Size imageSize, Mat&  cameraMatrix, Mat& distCoeffs, vector<vector<Point2f> > imagePoints)
 {
 
     vector<Mat> rvecs, tvecs;
@@ -725,7 +692,7 @@ bool runCalibrationAndSave(Settings& s, Size imageSize, Mat&  cameraMatrix, Mat&
 
     double totalAvgErr = 0;
 
-    bool ok = runCalibration(s,imageSize, cameraMatrix, distCoeffs, imagePoints, rvecs, tvecs, 
+    bool ok = runCalibration(s, imageSize, cameraMatrix, distCoeffs, imagePoints, rvecs, tvecs,
                              reprojErrs, totalAvgErr);
 
     cout << (ok ? "Calibration succeeded" : "Calibration failed")

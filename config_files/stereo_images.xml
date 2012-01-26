@@ -1,4 +1,11 @@
+<?xml version="1.0"?>
 <opencv_storage>
+<BoardSize_Width> 9</BoardSize_Width>
+<BoardSize_Height>7</BoardSize_Height>  
+<Square_Size>3.75</Square_Size>
+
+
+
 <left_images>
 ../data/capture-20110818T075129Z-1062-left.bmp ../data/capture-20110818T075129Z-1191-left.bmp ../data/capture-20110818T075129Z-1396-left.bmp ../data/capture-20110818T075129Z-1472-left.bmp ../data/capture-20110818T075129Z-1524-left.bmp ../data/capture-20110818T075129Z-1556-left.bmp ../data/capture-20110818T075129Z-1740-left.bmp ../data/capture-20110818T075129Z-636-left.bmp ../data/capture-20110818T075129Z-676-left.bmp ../data/capture-20110818T075129Z-757-left.bmp ../data/capture-20110818T075129Z-834-left.bmp
 </left_images>

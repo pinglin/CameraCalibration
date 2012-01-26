@@ -9,7 +9,27 @@ inline static void specialKeyFuncWrapper(int key, int x, int y){ ((StereoCalibra
 int main( int argc, char* argv[])
 {
 
+    if(argc < 2)
+    {
+        cerr << "A xml file containing iamge list is required." << endl;
+        exit(EXIT_FAILURE);
+    }
+
     StereoCalibration stereo_calib;
+
+    string xml_input(argv[1]);
+    stereo_calib.InitCalibParams(xml_input);
+
+
+
+
+
+
+
+
+
+
+
     stereo_calib.InitPangolin();
 
     specialKeyBindPangolin(specialKeyFuncWrapper);
@@ -23,6 +43,35 @@ StereoCalibration::StereoCalibration()
 {
 
     sysPtr = this;
+
+}
+
+void StereoCalibration::InitCalibParams(string &img_xml)
+{
+
+    FileStorage fs(img_xml, FileStorage::READ); // Read the settings
+    if (!fs.isOpened())
+    {
+        cout << "Could not open the configuration file: \"" << img_xml << "\"" << endl;
+        exit(EXIT_FAILURE);
+    }
+
+    calib_params.boardSize = Size((int)fs["BoardSize_Width"], (int)fs["BoardSize_Height"]);
+    calib_params.squareSize = (float)fs["Square_Size"];
+
+    FileNode left_imgs = fs["left_images"];
+    for(FileNodeIterator itr = left_imgs.begin(); itr != left_imgs.end(); itr++)
+        calib_params.LeftImageList.push_back((string)*itr);
+
+    FileNode right_imgs = fs["right_images"];
+    for(FileNodeIterator itr = right_imgs.begin(); itr != right_imgs.end(); itr++)
+        calib_params.RightImageList.push_back((string)*itr);
+
+    assert(calib_params.LeftImageList.size() == calib_params.RightImageList.size());
+
+    calib_params.nrFrames = calib_params.RightImageList.size();
+
+    fs.release();
 
 }
 

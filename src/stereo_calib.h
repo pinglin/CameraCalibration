@@ -24,6 +24,8 @@ public:
 
     StereoCalibration();
 
+    void InitCalibParams(string &img_xml);
+
     void InitPangolin();
 
     void Routine();
@@ -34,13 +36,14 @@ public:
 
 private:
 
-    struct Setting
+    struct CalibParams
     {
 
         Size boardSize;            // The size of the board -> Number of items by width and height
         float squareSize;          // The size of a square in your defined unit (point, millimeter,etc).
         int nrFrames;              // The number of frames to use from the input for calibration
-        float aspectRatio;         // The aspect ratio
+
+        int calib_flag;
 
         bool calibZeroTangentDist; // Assume zero tangential distortion
         bool calibFixPrincipalPoint;// Fix the principal point at the center
@@ -48,17 +51,20 @@ private:
         bool flipVertical;          // Flip the captured images around the horizontal axis
 
         string outputFileName;      // The name of the file where to write
-
         bool showUndistorsed;       // Show undistorted images after calibration
         string input;               // The input ->
 
-        vector<string> imageList;
+        vector<string> LeftImageList;
+        vector<string> RightImageList;
         int ImageList_idx;
 
-        bool goodInput;
-        int flag;
+        double LeftCamIntrins[4];   // fx, fy, px, py
+        double RightCamIntrins[4];
 
-    } setting;
+        vector<double[16]> LeftCamExtrins;  // Row-major order
+        vector<double[16]> RightCamExtrins;
+
+    } calib_params;
 
     View *panel, *view_left, *view_right, *img_left, *img_right;
     OpenGlRenderState state;
