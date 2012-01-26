@@ -481,11 +481,9 @@ int main(int argc, char* argv[])
 
             view = imread(s.imageList[i], 1);
             if(view.empty())
-
                 continue;
 
             remap(view, rview, map1, map2, INTER_LINEAR);
-
             imshow("Image View", rview);
 
             char c = waitKey();

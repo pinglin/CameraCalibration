@@ -60,9 +60,7 @@ private:
 
     } setting;
 
-    View *panel, *view;
+    View *panel, *view_left, *view_right, *img_left, *img_right;
     OpenGlRenderState state;
 
 };
-
-

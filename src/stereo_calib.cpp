@@ -30,7 +30,7 @@ void StereoCalibration::InitPangolin()
 {
 
 
-    const int WindowWidth = ImageWidth+PanelWidth-1;
+    const int WindowWidth = (ImageWidth)*2+PanelWidth-1;
     const int WindowHeight = ImageHeight;
 
     // Create OpenGL window in single line thanks to GLUT
@@ -50,8 +50,16 @@ void StereoCalibration::InitPangolin()
          .Set(IdentityMatrix(GlModelViewStack)).Apply();
 
     const double panel = (double)(PanelWidth-1)/(double)(WindowWidth-1);
-    view = &Display("cam").SetBounds(1.0, 0.0, panel, 1.0, -(double)ImageWidth/(double)ImageHeight);
-    view->SetHandler(new Handler3D(state));
+    const double middle_h = ((double)(WindowWidth-PanelWidth)/2.0)/(double)(WindowWidth) + (double)(PanelWidth)/(double)(WindowWidth);
+
+    view_left = &Display("ViewLeft").SetBounds(1.0, 0, panel, middle_h, -(double)ImageWidth/(double)ImageHeight);
+    view_left->SetHandler(new Handler3D(state));
+
+    view_right = &Display("ViewRight").SetBounds(1.0, 0, middle_h, 1.0, -(double)ImageWidth/(double)ImageHeight);
+    view_right->SetHandler(new Handler3D(state));
+
+    img_left = &Display("ImageLeft").SetBounds(1.0, 0.5, panel, middle_h, -(double)ImageWidth/(double)ImageHeight);
+    img_right = &Display("ImageRight").SetBounds(1.0, 0.5, middle_h, 1.0, -(double)ImageWidth/(double)ImageHeight);
 
 }
 
@@ -79,8 +87,8 @@ void StereoCalibration::SpecialKeyFunction(int key, int x, int y)
 
 void StereoCalibration::Routine(){
 
-    if(HasResized())
-        DisplayBase().ActivateScissorAndClear();
+//    if(HasResized())
+//        DisplayBase().ActivateScissorAndClear();
 
     // Safe and efficient binding of named variables.
     // Specialisations mean no conversions take place for exact types
@@ -104,12 +112,20 @@ void StereoCalibration::Routine(){
 
     // Activate efficiently by object
     // (3D Handler requires depth testing to be enabled)
-    view->ActivateScissorAndClear(state);
+
     glEnable(GL_DEPTH_TEST);
     glColor3f(1.0,1.0,1.0);
 
-    // Render some stuffvoid
+
+
+
+    view_left->ActivateScissorAndClear(state);
     glutWireTeapot(10.0);
+
+    view_right->ActivateScissorAndClear(state);
+    glutWireTeapot(10.0);
+
+
 
     panel->Render();
 
