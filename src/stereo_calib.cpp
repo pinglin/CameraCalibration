@@ -2,7 +2,6 @@
 
 // must be initialized in constructor as sysPtr = *System
 static void *sysPtr;
-
 inline static void routineWrapper(){ ((StereoCalibration*)sysPtr)->Routine(); }
 inline static void specialKeyFuncWrapper(int key, int x, int y){ ((StereoCalibration*)sysPtr)->SpecialKeyFunction(key, x, y); }
 
@@ -20,15 +19,7 @@ int main( int argc, char* argv[])
     string xml_input(argv[1]);
     stereo_calib.InitCalibParams(xml_input);
 
-
-
-
-
-
-
-
-
-
+    stereo_calib.Calibration();
 
     stereo_calib.InitPangolin();
 
@@ -74,6 +65,123 @@ void StereoCalibration::InitCalibParams(string &img_xml)
     fs.release();
 
 }
+
+void StereoCalibration::Calibration()
+{
+
+    vector<vector<Point2f> > LeftImagePoints, RightImagePoints;
+    Size ImageSize;
+
+    for(int i=0; i < calib_params.nrFrames; i++)
+    {
+
+        Mat view_left = imread(calib_params.LeftImageList.at(i), CV_LOAD_IMAGE_COLOR);
+        Mat view_right = imread(calib_params.RightImageList.at(i), CV_LOAD_IMAGE_COLOR);
+
+        ImageSize = view_left.size();
+        assert(ImageSize == view_right.size());
+
+        vector<Point2f> left_pointBuf;
+        vector<Point2f> right_pointBuf;
+        bool found_left = false;
+        bool found_right = false;
+
+        found_left = findChessboardCorners(view_left, calib_params.boardSize, left_pointBuf,
+                                      CV_CALIB_CB_ADAPTIVE_THRESH |
+                                      CV_CALIB_CB_NORMALIZE_IMAGE);
+
+        found_right = findChessboardCorners(view_right, calib_params.boardSize, right_pointBuf,
+                                      CV_CALIB_CB_ADAPTIVE_THRESH |
+                                      CV_CALIB_CB_NORMALIZE_IMAGE);
+
+        if(found_left && found_right)
+        {
+            Mat viewGray;
+            cvtColor(view_left, viewGray, CV_BGR2GRAY);
+            cornerSubPix(viewGray, left_pointBuf, Size(11, 11), Size(-1, -1),
+                         TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
+
+            cvtColor(view_right, viewGray, CV_BGR2GRAY);
+            cornerSubPix(viewGray, right_pointBuf, Size(11, 11), Size(-1, -1),
+                         TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
+
+//            drawChessboardCorners(view_left, calib_params.boardSize, Mat(left_pointBuf), found_left);
+//            imshow("Left Image View", view_left);
+//            drawChessboardCorners(view_right, calib_params.boardSize, Mat(right_pointBuf), found_right);
+//            imshow("Right Image View", view_right);
+//            waitKey();
+        }
+        else
+        {
+            cerr << "ith image cannot be found a pattern." << endl;
+            exit(EXIT_FAILURE);
+        }
+
+        LeftImagePoints.push_back(left_pointBuf);
+        RightImagePoints.push_back(right_pointBuf);
+
+    }
+
+    vector<vector<Point3f> > ObjectPoints(1);
+    for(int i=0; i<calib_params.boardSize.height; i++)
+        for(int j=0; j<calib_params.boardSize.width; j++)
+            ObjectPoints.at(0).push_back(Point3f(float( j*calib_params.squareSize ),
+                                           float( i*calib_params.squareSize ),
+                                           0));
+
+    ObjectPoints.resize(LeftImagePoints.size(), ObjectPoints[0]);
+
+
+    Mat LeftCameraMatrix, RightCameraMatrix;
+    vector<Mat> LeftRVecs, LeftTVecs, RightRVecs, RightTVecs;
+
+    Mat LeftDistCoeffs = Mat::zeros(8, 1, CV_64F);
+    Mat RightDistCoeffs = Mat::zeros(8, 1, CV_64F);
+
+    LeftCameraMatrix = initCameraMatrix2D(ObjectPoints, LeftImagePoints, ImageSize, 0);
+    double rms = calibrateCamera(ObjectPoints,
+                                 LeftImagePoints,
+                                 ImageSize,
+                                 LeftCameraMatrix,
+                                 LeftDistCoeffs,
+                                 LeftRVecs,
+                                 LeftTVecs,
+                                 CV_CALIB_USE_INTRINSIC_GUESS |
+                                 CV_CALIB_FIX_K4 |
+                                 CV_CALIB_FIX_K5 |
+                                 CV_CALIB_FIX_K6);
+
+   cout << "Re-projection error reported by left calibrateCamera: "<< rms << endl;
+
+   RightCameraMatrix = initCameraMatrix2D(ObjectPoints, LeftImagePoints, ImageSize, 0);
+   rms = calibrateCamera(ObjectPoints,
+                         RightImagePoints,
+                         ImageSize,
+                         RightCameraMatrix,
+                         RightDistCoeffs,
+                         RightRVecs,
+                         RightTVecs,
+                         CV_CALIB_USE_INTRINSIC_GUESS |
+                         CV_CALIB_FIX_K4 |
+                         CV_CALIB_FIX_K5 |
+                         CV_CALIB_FIX_K6);
+
+   cout << "Re-projection error reported by right calibrateCamera: "<< rms << endl;
+
+
+   cout << LeftCameraMatrix << endl;
+
+   cout << RightCameraMatrix << endl;
+
+
+}
+
+
+void STAY_CODING(bool STAY_HUNGRY)
+{
+    STAY_HUNGRY ? STAY_CODING(true):STAY_CODING(false);
+}
+
 
 void StereoCalibration::InitPangolin()
 {

@@ -26,6 +26,8 @@ public:
 
     void InitCalibParams(string &img_xml);
 
+    void Calibration();
+
     void InitPangolin();
 
     void Routine();
@@ -56,9 +58,9 @@ private:
 
         vector<string> LeftImageList;
         vector<string> RightImageList;
-        int ImageList_idx;
 
-        double LeftCamIntrins[4];   // fx, fy, px, py
+
+        double LeftCamIntrins[4];   // fx, fy, cx, cy
         double RightCamIntrins[4];
 
         vector<double[16]> LeftCamExtrins;  // Row-major order
