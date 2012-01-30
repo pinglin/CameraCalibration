@@ -151,7 +151,7 @@ void StereoCalibration::Calibration()
                                  CV_CALIB_FIX_K5 |
                                  CV_CALIB_FIX_K6);
 
-   cout << "Re-projection error reported by left calibrateCamera: "<< rms << endl;
+   cout << "Left camera re-projection error reported by calibrateCamera: "<< rms << endl;
 
    RightCameraMatrix = initCameraMatrix2D(ObjectPoints, LeftImagePoints, ImageSize, 0);
    rms = calibrateCamera(ObjectPoints,
@@ -166,13 +166,28 @@ void StereoCalibration::Calibration()
                          CV_CALIB_FIX_K5 |
                          CV_CALIB_FIX_K6);
 
-   cout << "Re-projection error reported by right calibrateCamera: "<< rms << endl;
+   cout << "Right camera re-projection error reported by calibrateCamera: "<< rms << endl;
+
+   Mat R, T, E, F;
+
+   rms = stereoCalibrate(ObjectPoints,
+                         LeftImagePoints,
+                         RightImagePoints,
+                         LeftCameraMatrix,
+                         LeftDistCoeffs,
+                         RightCameraMatrix,
+                         RightDistCoeffs,
+                         ImageSize,
+                         R,
+                         T,
+                         E,
+                         F);
 
 
-   cout << LeftCameraMatrix << endl;
+   cout << "Stereo re-projection error reported by stereoCalibrate: "<< rms << endl;
 
-   cout << RightCameraMatrix << endl;
-
+    cout << R << endl;
+    cout << T << endl;
 
 }
 
