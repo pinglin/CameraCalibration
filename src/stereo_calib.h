@@ -28,11 +28,17 @@ public:
 
     void Calibration();
 
+    void CvtCameraExtrins(vector<Mat> LeftRVecs, vector<Mat> LeftTVecs, vector<Mat> RightRVecs, vector<Mat> RightTVecs);
+
     void InitPangolin();
+
+    void InitChessboard();
 
     void Routine();
 
-    void ReadCalibrationSetting(string path);
+    void DrawChessboard();
+
+    void DrawAxis();
 
     void SpecialKeyFunction(int key, int x, int y);
 
@@ -59,16 +65,18 @@ private:
         vector<string> LeftImageList;
         vector<string> RightImageList;
 
-
         double LeftCamIntrins[4];   // fx, fy, cx, cy
         double RightCamIntrins[4];
 
-        vector<double[16]> LeftCamExtrins;  // Row-major order
-        vector<double[16]> RightCamExtrins;
+        vector<OpenGlMatrixSpec> LeftCamExtrins;  // Row-major order
+        vector<OpenGlMatrixSpec> RightCamExtrins;
 
     } calib_params;
 
     View *panel, *view_left, *view_right, *img_left, *img_right;
     OpenGlRenderState state;
+
+    GLuint textID;
+
 
 };

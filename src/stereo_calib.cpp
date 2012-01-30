@@ -20,8 +20,8 @@ int main( int argc, char* argv[])
     stereo_calib.InitCalibParams(xml_input);
 
     stereo_calib.Calibration();
-
     stereo_calib.InitPangolin();
+    stereo_calib.InitChessboard();
 
     specialKeyBindPangolin(specialKeyFuncWrapper);
     runPangolin(routineWrapper);
@@ -62,7 +62,7 @@ void StereoCalibration::InitCalibParams(string &img_xml)
 
     calib_params.nrFrames = calib_params.RightImageList.size();
 
-    fs.release();
+    fs.release();            
 
 }
 
@@ -168,8 +168,9 @@ void StereoCalibration::Calibration()
 
    cout << "Right camera re-projection error reported by calibrateCamera: "<< rms << endl;
 
-   Mat R, T, E, F;
+   CvtCameraExtrins(LeftRVecs, LeftTVecs, RightRVecs, RightTVecs);
 
+   Mat R, T, E, F;
    rms = stereoCalibrate(ObjectPoints,
                          LeftImagePoints,
                          RightImagePoints,
@@ -186,17 +187,36 @@ void StereoCalibration::Calibration()
 
    cout << "Stereo re-projection error reported by stereoCalibrate: "<< rms << endl;
 
-    cout << R << endl;
-    cout << T << endl;
+//    cout << R << endl;
+//    cout << T << endl;
 
 }
 
-
-void STAY_CODING(bool STAY_HUNGRY)
+void StereoCalibration::CvtCameraExtrins(vector<Mat> LeftRVecs, vector<Mat> LeftTVecs, vector<Mat> RightRVecs, vector<Mat> RightTVecs)
 {
-    STAY_HUNGRY ? STAY_CODING(true):STAY_CODING(false);
-}
 
+    Mat rot3x3;
+
+    for(int i=0; i<calib_params.nrFrames; i++)
+    {
+
+        OpenGlMatrixSpec P = IdentityMatrix(GlModelViewStack);
+
+        for(int col=0; col<3; col++)
+        {
+            for(int row=0; row<3; row++)
+            {
+                Rodrigues(LeftRVecs.at(i), rot3x3);
+                P.m[col*4+row] = rot3x3.at<double>(row, col);
+            }
+        }
+
+        copy(LeftTVecs.at(i).ptr<double>(), LeftTVecs.at(i).ptr<double>()+3, &P.m[12]);
+
+        cout << Mat(4, 4, CV_64F, P.m) << endl;
+    }
+
+}
 
 void StereoCalibration::InitPangolin()
 {
@@ -235,6 +255,36 @@ void StereoCalibration::InitPangolin()
 
 }
 
+void StereoCalibration::InitChessboard()
+{
+
+    GLubyte checkImage[8*calib_params.boardSize.height][8*calib_params.boardSize.width][4];
+
+    int i, j, c;
+    for (i = 0; i < 8*calib_params.boardSize.height; i++) {
+        for (j = 0; j < 8*calib_params.boardSize.width; j++) {
+            c = ((((i&0x8)==0)^((j&0x8)==0)))*255;
+            checkImage[i][j][0] = (GLubyte) c;
+            checkImage[i][j][1] = (GLubyte) c;
+            checkImage[i][j][2] = (GLubyte) c;
+            checkImage[i][j][3] = (GLubyte) 255;
+        }
+    }
+
+//    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+    glGenTextures(1, &textID);
+    glBindTexture(GL_TEXTURE_2D, textID);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 8*calib_params.boardSize.width,
+                 8*calib_params.boardSize.height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 checkImage);
+
+}
+
 void StereoCalibration::SpecialKeyFunction(int key, int x, int y)
 {
 
@@ -257,7 +307,61 @@ void StereoCalibration::SpecialKeyFunction(int key, int x, int y)
 
 }
 
-void StereoCalibration::Routine(){
+void StereoCalibration::DrawChessboard()
+{
+
+    float w = calib_params.squareSize*calib_params.boardSize.width;
+    float h = calib_params.squareSize*calib_params.boardSize.height;
+
+    glEnable(GL_DEPTH_TEST);
+
+    glEnable(GL_TEXTURE_2D);
+
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+    glBindTexture(GL_TEXTURE_2D, textID);
+
+    glBegin(GL_QUADS);
+    glTexCoord2f(0.0, 0.0); glVertex3f(0.0, 0.0, 0.0);
+    glTexCoord2f(0.0, 1.0); glVertex3f(0.0, h, 0.0);
+    glTexCoord2f(1.0, 1.0); glVertex3f(w, h, 0.0);
+    glTexCoord2f(1.0, 0.0); glVertex3f(w, 0.0, 0.0);
+    glEnd();
+
+    glDisable(GL_TEXTURE_2D);
+    glDisable(GL_DEPTH_TEST);
+
+}
+
+void StereoCalibration::DrawAxis()
+{
+
+    float size = calib_params.squareSize*10.0;
+
+    glEnable(GL_DEPTH_TEST);
+    glBegin(GL_LINES);
+
+    // x-axis
+    glColor3f(0.5f, 0, 0);
+    glVertex3f(0, 0, 0);
+    glVertex3f(size, 0, 0);
+
+    // y-axis
+    glColor3f(0, 0.5f, 0);
+    glVertex3f(0, 0, 0);
+    glVertex3f(0, size, 0);
+
+    // z-axis
+    glColor3f(0, 0, 0.5f);
+    glVertex3f(0, 0, 0);
+    glVertex3f(0, 0, size);
+
+    glEnd();
+    glDisable(GL_DEPTH_TEST);
+
+}
+
+void StereoCalibration::Routine()
+{
 
 //    if(HasResized())
 //        DisplayBase().ActivateScissorAndClear();
@@ -282,22 +386,13 @@ void StereoCalibration::Routine(){
 
     an_int_no_input = an_int;
 
-    // Activate efficiently by object
-    // (3D Handler requires depth testing to be enabled)
-
-    glEnable(GL_DEPTH_TEST);
-    glColor3f(1.0,1.0,1.0);
-
-
-
-
     view_left->ActivateScissorAndClear(state);
-    glutWireTeapot(10.0);
+    DrawChessboard();
+    DrawAxis();
 
     view_right->ActivateScissorAndClear(state);
-    glutWireTeapot(10.0);
-
-
+    DrawChessboard();
+    DrawAxis();
 
     panel->Render();
 
