@@ -28,17 +28,21 @@ public:
 
     void Calibration();
 
+    void CvtCameraIntrins(Mat LeftCameraMatrix, Mat RightCameraMatrix);
+
     void CvtCameraExtrins(vector<Mat> LeftRVecs, vector<Mat> LeftTVecs, vector<Mat> RightRVecs, vector<Mat> RightTVecs);
 
     void InitPangolin();
 
-    void InitChessboard();
+    void InitTexture();
 
     void Routine();
 
     void DrawChessboard();
 
     void DrawAxis();
+
+    void DrawImage(string &img_file);
 
     void SpecialKeyFunction(int key, int x, int y);
 
@@ -47,9 +51,10 @@ private:
     struct CalibParams
     {
 
-        Size boardSize;            // The size of the board -> Number of items by width and height
+        Size ImageSize;
+        Size BoardSize;            // The size of the board -> Number of items by width and height
         float squareSize;          // The size of a square in your defined unit (point, millimeter,etc).
-        int nrFrames;              // The number of frames to use from the input for calibration
+        int NumFrames;              // The number of frames to use from the input for calibration
 
         int calib_flag;
 
@@ -65,18 +70,22 @@ private:
         vector<string> LeftImageList;
         vector<string> RightImageList;
 
-        double LeftCamIntrins[4];   // fx, fy, cx, cy
-        double RightCamIntrins[4];
+        Mat LeftCameraMatrix, RightCameraMatrix;
+        Mat LeftDistCoeffs, RightDistCoeffs;
+
+        OpenGlMatrixSpec LeftCamIntrins;  // Row-major order
+        OpenGlMatrixSpec RightCamIntrins;
 
         vector<OpenGlMatrixSpec> LeftCamExtrins;  // Row-major order
         vector<OpenGlMatrixSpec> RightCamExtrins;
 
+        Mat R_wrtL, T_wrtL;
+
     } calib_params;
 
-    View *panel, *view_left, *view_right, *img_left, *img_right;
-    OpenGlRenderState state;
+    View *panel, *view_left, *view_right;
 
-    GLuint textID;
+    GLuint ChessTexID, ImgTexID;
 
 
 };

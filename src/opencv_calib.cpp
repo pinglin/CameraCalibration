@@ -35,11 +35,11 @@ public:
     void write(FileStorage& fs) const                        //Write serialization for this class
     {
 
-        fs << "{" << "BoardSize_Width"  << boardSize.width
-           << "BoardSize_Height" << boardSize.height
+        fs << "{" << "BoardSize_Width"  << BoardSize.width
+           << "BoardSize_Height" << BoardSize.height
            << "Square_Size"         << squareSize
            << "Calibrate_Pattern" << patternToUse
-           << "Calibrate_NrOfFrameToUse" << nrFrames
+           << "Calibrate_NrOfFrameToUse" << NumFrames
            << "Calibrate_FixAspectRatio" << aspectRatio
            << "Calibrate_AssumeZeroTangentialDistortion" << calibZeroTangentDist
            << "Calibrate_FixPrincipalPointAtTheCenter" << calibFixPrincipalPoint
@@ -58,11 +58,11 @@ public:
 
     {        
 
-        node["BoardSize_Width" ] >> boardSize.width;
-        node["BoardSize_Height"] >> boardSize.height;
+        node["BoardSize_Width" ] >> BoardSize.width;
+        node["BoardSize_Height"] >> BoardSize.height;
         node["Calibrate_Pattern"] >> patternToUse;
         node["Square_Size"]  >> squareSize;
-        node["Calibrate_NrOfFrameToUse"] >> nrFrames;
+        node["Calibrate_NrOfFrameToUse"] >> NumFrames;
         node["Calibrate_FixAspectRatio"] >> aspectRatio;
         node["Write_DetectedFeaturePoints"] >> bwritePoints;
         node["Write_extrinsicParameters"] >> bwriteExtrinsics;
@@ -81,10 +81,10 @@ public:
     {
 
         goodInput = true; 
-        if (boardSize.width <= 0 || boardSize.height <= 0)
+        if (BoardSize.width <= 0 || BoardSize.height <= 0)
         {
 
-            cerr << "Invalid Board size: " << boardSize.width << " " << boardSize.height << endl;
+            cerr << "Invalid Board size: " << BoardSize.width << " " << BoardSize.height << endl;
             goodInput = false;
 
         }
@@ -97,10 +97,10 @@ public:
 
         }
 
-        if (nrFrames <= 0)
+        if (NumFrames <= 0)
         {
 
-            cerr << "Invalid number of frames " << nrFrames << endl;
+            cerr << "Invalid number of frames " << NumFrames << endl;
             goodInput = false;
 
         }
@@ -124,7 +124,7 @@ public:
                 if(false)
                 {
                     inputType = IMAGE_LIST;
-                    nrFrames = (nrFrames < (int)imageList.size()) ? nrFrames : imageList.size();
+                    NumFrames = (NumFrames < (int)imageList.size()) ? NumFrames : imageList.size();
                 }
                 else
                     inputType = VIDEO_FILE;
@@ -214,10 +214,10 @@ public:
 
 public: 
 
-    Size boardSize;            // The size of the board -> Number of items by width and height
+    Size BoardSize;            // The size of the board -> Number of items by width and height
     Pattern calibrationPattern;// One of the Chessboard, circles, or asymmetric circle pattern
     float squareSize;          // The size of a square in your defined unit (point, millimeter,etc).
-    int nrFrames;              // The number of frames to use from the input for calibration
+    int NumFrames;              // The number of frames to use from the input for calibration
     float aspectRatio;         // The aspect ratio
     int delay;                 // In case of a video input 
     bool bwritePoints;         //  Write detected feature points
@@ -318,7 +318,7 @@ int main(int argc, char* argv[])
         view = s.nextImage();
 
         //-----  If no more image, or got enough, then stop calibration and show result -------------
-        if( mode == CAPTURING && imagePoints.size() >= (unsigned)s.nrFrames )
+        if( mode == CAPTURING && imagePoints.size() >= (unsigned)s.NumFrames )
         {
 
             if( runCalibrationAndSave(s, imageSize,  cameraMatrix, distCoeffs, imagePoints))
@@ -352,16 +352,16 @@ int main(int argc, char* argv[])
             {
 
             case Settings::CHESSBOARD:
-                found = findChessboardCorners(view, s.boardSize, pointBuf,
+                found = findChessboardCorners(view, s.BoardSize, pointBuf,
                                               CV_CALIB_CB_ADAPTIVE_THRESH | CV_CALIB_CB_FAST_CHECK | CV_CALIB_CB_NORMALIZE_IMAGE);
                 break;
 
             case Settings::CIRCLES_GRID:
-                found = findCirclesGrid( view, s.boardSize, pointBuf );
+                found = findCirclesGrid( view, s.BoardSize, pointBuf );
                 break;
 
             case Settings::ASYMMETRIC_CIRCLES_GRID:
-                found = findCirclesGrid( view, s.boardSize, pointBuf, CALIB_CB_ASYMMETRIC_GRID );
+                found = findCirclesGrid( view, s.BoardSize, pointBuf, CALIB_CB_ASYMMETRIC_GRID );
                 break;
 
             default:
@@ -396,7 +396,7 @@ int main(int argc, char* argv[])
                 }
 
                 // Draw the corners.
-                drawChessboardCorners( view, s.boardSize, Mat(pointBuf), found );
+                drawChessboardCorners( view, s.BoardSize, Mat(pointBuf), found );
 
             }
         }
@@ -412,9 +412,9 @@ int main(int argc, char* argv[])
         {
 
             if(s.showUndistorsed)
-                msg = format( "%d/%d Undist", (int)imagePoints.size(), s.nrFrames );
+                msg = format( "%d/%d Undist", (int)imagePoints.size(), s.NumFrames );
             else
-                msg = format( "%d/%d", (int)imagePoints.size(), s.nrFrames );
+                msg = format( "%d/%d", (int)imagePoints.size(), s.NumFrames );
 
         }
 
@@ -518,7 +518,7 @@ double computeReprojectionErrors( const vector<vector<Point3f> >& objectPoints,
 
 
 
-void calcBoardCornerPositions(Size boardSize, float squareSize, vector<Point3f>& corners, 
+void calcBoardCornerPositions(Size BoardSize, float squareSize, vector<Point3f>& corners,
                               Settings::Pattern patternType /*= Settings::CHESSBOARD*/)
 {
 
@@ -529,14 +529,14 @@ void calcBoardCornerPositions(Size boardSize, float squareSize, vector<Point3f>&
 
     case Settings::CHESSBOARD:
     case Settings::CIRCLES_GRID:
-        for( int i = 0; i < boardSize.height; ++i )
-            for( int j = 0; j < boardSize.width; ++j )
+        for( int i = 0; i < BoardSize.height; ++i )
+            for( int j = 0; j < BoardSize.width; ++j )
                 corners.push_back(Point3f(float( j*squareSize ), float( i*squareSize ), 0));
         break;
 
     case Settings::ASYMMETRIC_CIRCLES_GRID:
-        for( int i = 0; i < boardSize.height; i++ )
-            for( int j = 0; j < boardSize.width; j++ )
+        for( int i = 0; i < BoardSize.height; i++ )
+            for( int j = 0; j < BoardSize.width; j++ )
                 corners.push_back(Point3f(float((2*j + i % 2)*squareSize), float(i*squareSize), 0));
         break;
 
@@ -560,7 +560,7 @@ bool runCalibration(Settings& s, Size& imageSize, Mat& cameraMatrix, Mat& distCo
     distCoeffs = Mat::zeros(8, 1, CV_64F);
 
     vector<vector<Point3f> > objectPoints(1);
-    calcBoardCornerPositions(s.boardSize, s.squareSize, objectPoints[0], s.calibrationPattern);
+    calcBoardCornerPositions(s.BoardSize, s.squareSize, objectPoints[0], s.calibrationPattern);
 
     objectPoints.resize(imagePoints.size(),objectPoints[0]);
 
@@ -606,8 +606,8 @@ void saveCameraParams(Settings& s, Size& imageSize, Mat& cameraMatrix, Mat& dist
 
     fs << "image_Width" << imageSize.width;
     fs << "image_Height" << imageSize.height;
-    fs << "board_Width" << s.boardSize.width;
-    fs << "board_Height" << s.boardSize.height;
+    fs << "board_Width" << s.BoardSize.width;
+    fs << "board_Height" << s.BoardSize.height;
     fs << "square_Size" << s.squareSize;
 
     if( s.flag & CV_CALIB_FIX_ASPECT_RATIO )
