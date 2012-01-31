@@ -4,6 +4,7 @@
 #include <time.h>
 
 #include <pangolin/pangolin.h>
+#include <pangolin/simple_math.h>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
