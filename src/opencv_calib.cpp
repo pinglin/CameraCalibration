@@ -37,7 +37,7 @@ public:
 
         fs << "{" << "BoardSize_Width"  << BoardSize.width
            << "BoardSize_Height" << BoardSize.height
-           << "Square_Size"         << squareSize
+           << "Square_Size"         << SquareSize
            << "Calibrate_Pattern" << patternToUse
            << "Calibrate_NrOfFrameToUse" << NumFrames
            << "Calibrate_FixAspectRatio" << aspectRatio
@@ -61,7 +61,7 @@ public:
         node["BoardSize_Width" ] >> BoardSize.width;
         node["BoardSize_Height"] >> BoardSize.height;
         node["Calibrate_Pattern"] >> patternToUse;
-        node["Square_Size"]  >> squareSize;
+        node["Square_Size"]  >> SquareSize;
         node["Calibrate_NrOfFrameToUse"] >> NumFrames;
         node["Calibrate_FixAspectRatio"] >> aspectRatio;
         node["Write_DetectedFeaturePoints"] >> bwritePoints;
@@ -89,10 +89,10 @@ public:
 
         }
 
-        if (squareSize <= 10e-6)
+        if (SquareSize <= 10e-6)
         {
 
-            cerr << "Invalid square size " << squareSize << endl;
+            cerr << "Invalid square size " << SquareSize << endl;
             goodInput = false;
 
         }
@@ -216,7 +216,7 @@ public:
 
     Size BoardSize;            // The size of the board -> Number of items by width and height
     Pattern calibrationPattern;// One of the Chessboard, circles, or asymmetric circle pattern
-    float squareSize;          // The size of a square in your defined unit (point, millimeter,etc).
+    float SquareSize;          // The size of a square in your defined unit (point, millimeter,etc).
     int NumFrames;              // The number of frames to use from the input for calibration
     float aspectRatio;         // The aspect ratio
     int delay;                 // In case of a video input 
@@ -518,7 +518,7 @@ double computeReprojectionErrors( const vector<vector<Point3f> >& objectPoints,
 
 
 
-void calcBoardCornerPositions(Size BoardSize, float squareSize, vector<Point3f>& corners,
+void calcBoardCornerPositions(Size BoardSize, float SquareSize, vector<Point3f>& corners,
                               Settings::Pattern patternType /*= Settings::CHESSBOARD*/)
 {
 
@@ -531,13 +531,13 @@ void calcBoardCornerPositions(Size BoardSize, float squareSize, vector<Point3f>&
     case Settings::CIRCLES_GRID:
         for( int i = 0; i < BoardSize.height; ++i )
             for( int j = 0; j < BoardSize.width; ++j )
-                corners.push_back(Point3f(float( j*squareSize ), float( i*squareSize ), 0));
+                corners.push_back(Point3f(float( j*SquareSize ), float( i*SquareSize ), 0));
         break;
 
     case Settings::ASYMMETRIC_CIRCLES_GRID:
         for( int i = 0; i < BoardSize.height; i++ )
             for( int j = 0; j < BoardSize.width; j++ )
-                corners.push_back(Point3f(float((2*j + i % 2)*squareSize), float(i*squareSize), 0));
+                corners.push_back(Point3f(float((2*j + i % 2)*SquareSize), float(i*SquareSize), 0));
         break;
 
     default:
@@ -560,7 +560,7 @@ bool runCalibration(Settings& s, Size& imageSize, Mat& cameraMatrix, Mat& distCo
     distCoeffs = Mat::zeros(8, 1, CV_64F);
 
     vector<vector<Point3f> > objectPoints(1);
-    calcBoardCornerPositions(s.BoardSize, s.squareSize, objectPoints[0], s.calibrationPattern);
+    calcBoardCornerPositions(s.BoardSize, s.SquareSize, objectPoints[0], s.calibrationPattern);
 
     objectPoints.resize(imagePoints.size(),objectPoints[0]);
 
@@ -608,7 +608,7 @@ void saveCameraParams(Settings& s, Size& imageSize, Mat& cameraMatrix, Mat& dist
     fs << "image_Height" << imageSize.height;
     fs << "board_Width" << s.BoardSize.width;
     fs << "board_Height" << s.BoardSize.height;
-    fs << "square_Size" << s.squareSize;
+    fs << "square_Size" << s.SquareSize;
 
     if( s.flag & CV_CALIB_FIX_ASPECT_RATIO )
         fs << "FixAspectRatio" << s.aspectRatio;

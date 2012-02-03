@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <time.h>
 
@@ -25,13 +26,17 @@ public:
 
     StereoCalibration();
 
-    void InitCalibParams(string &img_xml);
+    void ReadCalibParams(string &img_xml);
+
+    void WriteCalibParams();
 
     void Calibration();
 
     void CvtCameraIntrins(Mat LeftCameraMatrix, Mat RightCameraMatrix);
 
-    void CvtCameraExtrins(vector<Mat> LeftRVecs, vector<Mat> LeftTVecs, vector<Mat> RightRVecs, vector<Mat> RightTVecs);
+    void CvtCameraExtrins(const vector<Mat> &LeftRVecs, const vector<Mat> &LeftTVecs,
+                          const vector<Mat> &RightRVecs, const vector<Mat> &RightTVecs,
+                          const Mat &R, const Mat &T);
 
     void InitPangolin();
 
@@ -39,11 +44,13 @@ public:
 
     void Routine();
 
+    OpenGlMatrixSpec StereoBind(const OpenGlMatrixSpec &LeftCamera);
+
     void DrawChessboard();
 
     void DrawAxis();
 
-    void DrawImage(string &img_file);
+    void DrawImage(const string &img_file, bool isUndistort, bool isLeftCamera);
 
     void SpecialKeyFunction(int key, int x, int y);
 
@@ -54,7 +61,7 @@ private:
 
         Size ImageSize;
         Size BoardSize;            // The size of the board -> Number of items by width and height
-        float squareSize;          // The size of a square in your defined unit (point, millimeter,etc).
+        float SquareSize;          // The size of a square in your defined unit (point, millimeter,etc).
         int NumFrames;              // The number of frames to use from the input for calibration
 
         int calib_flag;
@@ -80,13 +87,13 @@ private:
         vector<OpenGlMatrixSpec> LeftCamExtrins;  // Row-major order
         vector<OpenGlMatrixSpec> RightCamExtrins;
 
-        Mat R_wrtL, T_wrtL;
+        OpenGlMatrixSpec CamRwrtLExtrins;
 
     } calib_params;
 
     View *panel, *view_left, *view_right;
-
     GLuint ChessTexID, ImgTexID;
 
+    int *show_idx;
 
 };
