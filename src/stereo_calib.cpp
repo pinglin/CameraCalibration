@@ -201,8 +201,6 @@ void StereoCalibration::Calibration()
 
    cout << "Right camera re-projection error reported by calibrateCamera: "<< rms << endl;
 
-   cout << calib_params.RightDistCoeffs << endl;
-
    Mat R, T, E, F;
    rms = stereoCalibrate(ObjectPoints,
                          LeftImagePoints,
@@ -329,8 +327,8 @@ void StereoCalibration::InitTexture()
     glBindTexture(GL_TEXTURE_2D, ChessTexID);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 8*calib_params.BoardSize.width,
                  8*calib_params.BoardSize.height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
                  checkImage);
@@ -339,7 +337,7 @@ void StereoCalibration::InitTexture()
     glGenTextures(1,&ImgTexID);
     glBindTexture(GL_TEXTURE_2D, ImgTexID);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, calib_params.ImageSize.width,
-                 calib_params.ImageSize.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
+                 calib_params.ImageSize.height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   //  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -372,8 +370,6 @@ void StereoCalibration::DrawChessboard()
     float w = calib_params.SquareSize*calib_params.BoardSize.width;
     float h = calib_params.SquareSize*calib_params.BoardSize.height;
 
-    glEnable(GL_DEPTH_TEST);
-
     glEnable(GL_TEXTURE_2D);
 
     glBindTexture(GL_TEXTURE_2D, ChessTexID);
@@ -386,7 +382,6 @@ void StereoCalibration::DrawChessboard()
     glEnd();
 
     glDisable(GL_TEXTURE_2D);
-    glDisable(GL_DEPTH_TEST);
 
 }
 
