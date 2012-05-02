@@ -69,7 +69,6 @@ void StereoCalibration::ReadCalibParams(string &img_xml)
 void StereoCalibration::WriteCalibParams()
 {
 
-
     time_t t;
     time( &t );
 
@@ -203,19 +202,43 @@ void StereoCalibration::Calibration()
 
    Mat R, T, E, F;
    rms = stereoCalibrate(ObjectPoints,
-                         LeftImagePoints,
-                         RightImagePoints,
-                         calib_params.LeftCameraMatrix,
-                         calib_params.LeftDistCoeffs,
-                         calib_params.RightCameraMatrix,
-                         calib_params.RightDistCoeffs,
-                         calib_params.ImageSize,
-                         R,
-                         T,
-                         E,
-                         F);
+						LeftImagePoints,
+						RightImagePoints,
+						calib_params.LeftCameraMatrix,
+						calib_params.LeftDistCoeffs,
+						calib_params.RightCameraMatrix,
+						calib_params.RightDistCoeffs,
+						calib_params.ImageSize,
+						R,
+						T,
+						E,
+						F);
+  
+   /*Mat distCoeffs[2];
+   calib_params.LeftCameraMatrix = Mat::eye(3, 3, CV_64F);
+   calib_params.RightCameraMatrix = Mat::eye(3, 3, CV_64F);
+   calib_params.LeftDistCoeffs = distCoeffs[0];
+   calib_params.RightDistCoeffs = distCoeffs[1];
 
-   cout << "Stereo re-projection error reported by stereoCalibrate: "<< rms << endl;
+   Mat R, T, E, F;
+
+   rms = stereoCalibrate(ObjectPoints,
+	   LeftImagePoints,
+	   RightImagePoints,
+	   calib_params.LeftCameraMatrix,
+	   calib_params.LeftDistCoeffs,
+	   calib_params.RightCameraMatrix,
+	   calib_params.RightDistCoeffs,
+	   calib_params.ImageSize, R, T, E, F,
+	   TermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, 1e-5),
+	   CV_CALIB_FIX_ASPECT_RATIO +
+	   CV_CALIB_ZERO_TANGENT_DIST +
+	   CV_CALIB_SAME_FOCAL_LENGTH +
+	   CV_CALIB_RATIONAL_MODEL +
+	   CV_CALIB_FIX_K3 + CV_CALIB_FIX_K4 + CV_CALIB_FIX_K5);*/
+
+   cout << "Stereo re-projection error reported by stereoCalibrate: " << rms << endl;
+
 
    CvtCameraExtrins(LeftRVecs, LeftTVecs, RightRVecs, RightTVecs, R, T);
 
@@ -307,16 +330,18 @@ void StereoCalibration::InitPangolin()
 void StereoCalibration::InitTexture()
 {
 
-    GLubyte checkImage[8*calib_params.BoardSize.height][8*calib_params.BoardSize.width][4];
+	GLubyte* checkImage = new GLubyte[8*calib_params.BoardSize.height*8*calib_params.BoardSize.width*4];
 
     int i, j, c;
-    for (i = 0; i < 8*calib_params.BoardSize.height; i++) {
-        for (j = 0; j < 8*calib_params.BoardSize.width; j++) {
+    for (i = 0; i < 8*calib_params.BoardSize.height; i++) 
+	{
+        for (j = 0; j < 8*calib_params.BoardSize.width; j++) 
+		{
             c = ((((i&0x8)==0)^((j&0x8)==0)))*255;
-            checkImage[i][j][0] = (GLubyte) c;
-            checkImage[i][j][1] = (GLubyte) c;
-            checkImage[i][j][2] = (GLubyte) 0;
-            checkImage[i][j][3] = (GLubyte) 100;
+            checkImage[i*(8*calib_params.BoardSize.width*4)+j*4+0] = (GLubyte) 0;
+            checkImage[i*(8*calib_params.BoardSize.width*4)+j*4+1] = (GLubyte) c;
+            checkImage[i*(8*calib_params.BoardSize.width*4)+j*4+2] = (GLubyte) 0;
+            checkImage[i*(8*calib_params.BoardSize.width*4)+j*4+3] = (GLubyte) 100;
         }
     }
 
@@ -325,13 +350,16 @@ void StereoCalibration::InitTexture()
     // Texture for chessboard
     glGenTextures(1, &ChessTexID);
     glBindTexture(GL_TEXTURE_2D, ChessTexID);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 8*calib_params.BoardSize.width,
+ //   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+ //   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 8*calib_params.BoardSize.width,
                  8*calib_params.BoardSize.height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
                  checkImage);
+
+	delete [] checkImage;
 
     // Texture for image
     glGenTextures(1,&ImgTexID);
@@ -370,6 +398,7 @@ void StereoCalibration::DrawChessboard()
     float w = calib_params.SquareSize*calib_params.BoardSize.width;
     float h = calib_params.SquareSize*calib_params.BoardSize.height;
 
+	//glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
 
     glBindTexture(GL_TEXTURE_2D, ChessTexID);
@@ -382,6 +411,7 @@ void StereoCalibration::DrawChessboard()
     glEnd();
 
     glDisable(GL_TEXTURE_2D);
+	//glDisable(GL_DEPTH_TEST);
 
 }
 

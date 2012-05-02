@@ -3,11 +3,20 @@ IF(UNIX)
         FIND_LIBRARY(Pangolin_LIBRARY pangolin ../../Pangolin/pangolin)
 ENDIF(UNIX)
 
-#IF(WIN32)
-#        FIND_PATH(NLOPT_INCLUDE_DIR nlopt.h "C:\\Users\\Pinglin\\Documents\\C Workspace\\nlopt")
-#        FIND_LIBRARY(NLOPT_LIBRARY nlopt-0 "C:\\Users\\Pinglin\\Documents\\C Workspace\\nlopt")
-#ENDIF(WIN32)
+IF(MSVC)
+        FIND_PATH(Pangolin_INCLUDE_DIR pangolin/pangolin.h ../../Libraries/Pangolin)
+        FIND_LIBRARY(Pangolin_LIB_RELEASE 
+                     NAMES pangolin 
+                     PATHS ../../Libraries/Pangolin/pangolin)
+        FIND_LIBRARY(Pangolin_LIB_DEBUG 
+                     NAMES pangolind 
+                     PATHS ../../Libraries/Pangolin/pangolin)
+ENDIF(MSVC)
 
-IF(Pangolin_INCLUDE_DIR AND Pangolin_LIBRARY)
-  SET( Pangolin_FOUND TRUE )
-ENDIF(Pangolin_INCLUDE_DIR AND Pangolin_LIBRARY)
+IF(Pangolin_INCLUDE_DIR AND Pangolin_LIB_RELEASE AND Pangolin_LIB_DEBUG)
+  SET(Pangolin_FOUND TRUE)
+  SET(Pangolin_LIBRARY optimized ${Pangolin_LIB_RELEASE} debug ${Pangolin_LIB_DEBUG}  
+      CACHE STRING
+      "Pangolin debug and release libraries"
+      FORCE)
+ENDIF(Pangolin_INCLUDE_DIR AND Pangolin_LIB_RELEASE AND Pangolin_LIB_DEBUG)
