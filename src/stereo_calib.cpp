@@ -1,9 +1,6 @@
 #include "stereo_calib.h"
 
-// must be initialized in constructor as sysPtr = *System
-static void *sysPtr;
-inline static void routineWrapper(){ ((StereoCalibration*)sysPtr)->Routine(); }
-inline static void specialKeyFuncWrapper(int key, int x, int y){ ((StereoCalibration*)sysPtr)->SpecialKeyFunction(key, x, y); }
+int *show_idx;
 
 int main( int argc, char* argv[])
 {
@@ -23,8 +20,51 @@ int main( int argc, char* argv[])
     stereo_calib.InitPangolin();
     stereo_calib.InitTexture();
 
-    specialKeyBindPangolin(specialKeyFuncWrapper);
-    runPangolin(routineWrapper);
+	while( !pangolin::ShouldQuit() )
+	{
+		if(pangolin::HasResized())
+			DisplayBase().ActivateScissorAndClear();
+
+
+		static Var<int> img_idx("ui.Image: ", 0, 0, calib_params.NumFrames-1);
+		static Var<bool> is_stereobind("ui.Stereo Bind", false, true);
+		static Var<bool> is_undistort("ui.Undistort image", false, true);
+		static Var<bool> export_button("ui.Export Results", false, false);
+
+		show_idx = (int*)img_idx.var->val;
+
+		// Left view
+		stereo_calib.view_left->ActivateScissorAndClear();
+		stereo_calib.DrawImage(calib_params.LeftImageList.at(img_idx), is_undistort, true);
+		calib_params.LeftCamIntrins.Load();
+		calib_params.LeftCamExtrins.at(img_idx).Load();
+		stereo_calib.DrawAxis();
+		stereo_calib.DrawChessboard();
+
+		// Right view
+		stereo_calib.view_right->ActivateScissorAndClear();
+		stereo_calib.DrawImage(calib_params.RightImageList.at(img_idx), is_undistort, false);
+		calib_params.RightCamIntrins.Load();
+
+		if(is_stereobind)
+			stereo_calib.StereoBind(calib_params.LeftCamExtrins.at(img_idx)).Load();
+		else
+			calib_params.RightCamExtrins.at(img_idx).Load();
+
+		stereo_calib.DrawAxis();
+		stereo_calib.DrawChessboard();
+
+		stereo_calib.panel->Render();
+
+		if(Pushed(export_button))
+			stereo_calib.WriteCalibParams();
+
+		stereo_calib.panel->Render();			
+
+		// Swap frames and Process Events
+		glutSwapBuffers();
+		glutMainLoopEvent();
+	}
 
     return 0;
 
@@ -32,8 +72,6 @@ int main( int argc, char* argv[])
 
 StereoCalibration::StereoCalibration()
 {
-
-    sysPtr = this;
 
 }
 
@@ -252,7 +290,6 @@ void StereoCalibration::CvtCameraExtrins(const vector<Mat> &LeftRVecs, const vec
     Mat rot3x3;
     OpenGlMatrixSpec P = IdentityMatrix(GlModelViewStack);
 
-
     for(int i=0; i<calib_params.NumFrames; i++)
     {
         Rodrigues(LeftRVecs.at(i), rot3x3);
@@ -280,6 +317,23 @@ void StereoCalibration::CvtCameraExtrins(const vector<Mat> &LeftRVecs, const vec
 
 }
 
+void SpecialKeyFunction(int key, int x, int y)
+{
+
+	switch(key)
+	{
+	case GLUT_KEY_LEFT:
+		if(*show_idx > 0)
+			(*show_idx)--;
+		break;
+	case GLUT_KEY_RIGHT:
+		if(*show_idx < calib_params.NumFrames-1)
+			(*show_idx)++;
+		break;
+	}
+
+}
+
 void StereoCalibration::InitPangolin()
 {
 
@@ -288,16 +342,20 @@ void StereoCalibration::InitPangolin()
 
     // Create OpenGL window in single line thanks to GLUT
     CreateGlutWindowAndBind("Main", WindowWidth, WindowHeight, GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH | GLUT_MULTISAMPLE);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    GLenum err = glewInit();
-    if(GLEW_OK != err)
-    {
-        cerr << "GLEW Error: " << glewGetErrorString(err) << endl;
-        exit(0);
-    }
+	// Issue specific OpenGl we might need
+	glEnable (GL_BLEND);
+	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    //GLenum err = glewInit();
+    //if(GLEW_OK != err)
+    //{
+    //    cerr << "GLEW Error: " << glewGetErrorString(err) << endl;
+    //    exit(0);
+    //}
 
     panel = &CreatePanel("ui").SetBounds(1.0, 0.0, 0.0, (double)PanelWidth/DisplayBase().v.w);
-
 
     calib_params.LeftCamIntrins = ProjectionMatrixRDF_TopLeft(calib_params.ImageSize.width,
                                                               calib_params.ImageSize.height,
@@ -323,8 +381,7 @@ void StereoCalibration::InitPangolin()
     view_left = &Display("ViewLeft").SetBounds(1.0, 0, panel, middle_h, -(double)ImageWidth/(double)ImageHeight);
     view_right = &Display("ViewRight").SetBounds(1.0, 0, middle_h, 1.0, -(double)ImageWidth/(double)ImageHeight);
 
-    show_idx = 0;
-
+	glutSpecialFunc(&SpecialKeyFunction);
 }
 
 void StereoCalibration::InitTexture()
@@ -372,23 +429,6 @@ void StereoCalibration::InitTexture()
   //  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-
-}
-
-void StereoCalibration::SpecialKeyFunction(int key, int x, int y)
-{
-
-        switch(key)
-        {
-        case GLUT_KEY_LEFT:
-            if(*show_idx > 0)
-                (*show_idx)--;
-            break;
-        case GLUT_KEY_RIGHT:
-            if(*show_idx < calib_params.NumFrames-1)
-                (*show_idx)++;
-            break;
-        }
 
 }
 
@@ -500,44 +540,5 @@ OpenGlMatrixSpec StereoCalibration::StereoBind(const OpenGlMatrixSpec &LeftCamer
     MatMul<4, 4, 4, double>(P.m, calib_params.CamRwrtLExtrins.m, LeftCamera.m);
 
     return P;
-
-}
-
-
-void StereoCalibration::Routine()
-{
-
-    static Var<int> img_idx("ui.Image: ", 0, 0, calib_params.NumFrames-1);
-    static Var<bool> is_stereobind("ui.Stereo Bind", false, true);
-    static Var<bool> is_undistort("ui.Undistort image", false, true);
-    static Var<bool> export_button("ui.Export Results", false, false);
-
-    show_idx = (int*)img_idx.var->val;
-
-    // Left view
-    view_left->ActivateScissorAndClear();
-    DrawImage(calib_params.LeftImageList.at(img_idx), is_undistort, true);
-    calib_params.LeftCamIntrins.Load();
-    calib_params.LeftCamExtrins.at(img_idx).Load();
-    DrawAxis();
-    DrawChessboard();
-
-    // Right view
-    view_right->ActivateScissorAndClear();
-    DrawImage(calib_params.RightImageList.at(img_idx), is_undistort, false);
-    calib_params.RightCamIntrins.Load();
-
-    if(is_stereobind)
-        StereoBind(calib_params.LeftCamExtrins.at(img_idx)).Load();
-    else
-        calib_params.RightCamExtrins.at(img_idx).Load();
-
-    DrawAxis();
-    DrawChessboard();
-
-    panel->Render();
-
-    if(Pushed(export_button))
-        WriteCalibParams();
 
 }

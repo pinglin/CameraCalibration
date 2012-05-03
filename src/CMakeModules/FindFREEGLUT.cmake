@@ -9,20 +9,36 @@ IF(MSVC)
    FIND_PATH( FREEGLUT_INCLUDE_DIR GL/freeglut.h
       $ENV{PROGRAMFILES}/FREEGLUT/include
       DOC "The directory where GL/freeflut.h resides")
-   
-   IF(CMAKE_CL_64) 
-      FIND_LIBRARY( FREEGLUT_LIBRARY
-         NAMES freeglut_static freeglut
-         PATHS
-         $ENV{ProgramW6432}/FREEGLUT/lib/x64
-         DOC "The FREEGLUT 64-bit library")
-   ELSE(CMAKE_CL_64)
-      FIND_LIBRARY( FREEGLUT_LIBRARY
-         NAMES freeglut_static freeglut
-         PATHS
-         $ENV{PROGRAMFILES}/FREEGLUT/lib/x86
-         DOC "The FREEGLUT 32-bit library")
-   ENDIF(CMAKE_CL_64)
+
+   IF(BUILD_SHARED_LIB OR USE_SHARED_LIB)
+      IF(CMAKE_CL_64) 
+         FIND_LIBRARY( FREEGLUT_LIBRARY
+            NAMES freeglut
+            PATHS
+            $ENV{ProgramW6432}/FREEGLUT/lib/x64
+            DOC "The FREEGLUT 64-bit library")
+      ELSE(CMAKE_CL_64)
+         FIND_LIBRARY( FREEGLUT_LIBRARY
+            NAMES freeglut
+            PATHS
+            $ENV{PROGRAMFILES}/FREEGLUT/lib/x86
+            DOC "The FREEGLUT 32-bit library")
+      ENDIF(CMAKE_CL_64)
+   ELSE(BUILD_SHARED_LIB OR USE_SHARED_LIB)
+      IF(CMAKE_CL_64) 
+         FIND_LIBRARY( FREEGLUT_LIBRARY
+            NAMES freeglut_static
+            PATHS
+            $ENV{ProgramW6432}/FREEGLUT/lib/x64
+            DOC "The FREEGLUT 64-bit library")
+      ELSE(CMAKE_CL_64)
+         FIND_LIBRARY( FREEGLUT_LIBRARY
+            NAMES freeglut_static
+            PATHS
+            $ENV{PROGRAMFILES}/FREEGLUT/lib/x86
+            DOC "The FREEGLUT 32-bit library")
+      ENDIF(CMAKE_CL_64)
+   ENDIF(BUILD_SHARED_LIB OR USE_SHARED_LIB)
    
 ELSE(MSVC)
 
@@ -52,7 +68,7 @@ ENDIF (FREEGLUT_INCLUDE_DIR AND FREEGLUT_LIBRARY)
 
 IF (FREEGLUT_FOUND)
    IF (NOT FREEGLUT_FIND_QUIETLY)
-      MESSAGE(STATUS "Found FREEGLUT")
+      MESSAGE(STATUS "Found FREEGLUT: ${FREEGLUT_LIBRARY}")
    ENDIF (NOT FREEGLUT_FIND_QUIETLY)
 ELSE (FREEGLUT_FOUND)
    IF (FREEGLUT_FIND_REQUIRED)

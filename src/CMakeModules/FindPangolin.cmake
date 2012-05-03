@@ -1,16 +1,16 @@
 IF(UNIX)
-        FIND_PATH(Pangolin_INCLUDE_DIR pangolin/pangolin.h ../../Pangolin)
-        FIND_LIBRARY(Pangolin_LIBRARY pangolin ../../Pangolin/pangolin)
+        FIND_PATH(Pangolin_INCLUDE_DIR pangolin/pangolin.h ../../Pangolin/include)
+        FIND_LIBRARY(Pangolin_LIBRARY pangolin ../../Pangolin/lib)
 ENDIF(UNIX)
 
 IF(MSVC)
-        FIND_PATH(Pangolin_INCLUDE_DIR pangolin/pangolin.h ../../Libraries/Pangolin)
+        FIND_PATH(Pangolin_INCLUDE_DIR pangolin/pangolin.h ../../Libraries/Pangolin/include)
         FIND_LIBRARY(Pangolin_LIB_RELEASE 
                      NAMES pangolin 
-                     PATHS ../../Libraries/Pangolin/pangolin)
+                     PATHS ../../Libraries/Pangolin/lib)
         FIND_LIBRARY(Pangolin_LIB_DEBUG 
                      NAMES pangolind 
-                     PATHS ../../Libraries/Pangolin/pangolin)
+                     PATHS ../../Libraries/Pangolin/lib/Debug)
 ENDIF(MSVC)
 
 IF(Pangolin_INCLUDE_DIR AND Pangolin_LIB_RELEASE AND Pangolin_LIB_DEBUG)
