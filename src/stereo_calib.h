@@ -22,11 +22,14 @@ const int ImageHeight = 576;
 
 struct CalibParams
 {
+	int NumFrames;              // The number of frames to use from the input for calibration
 
 	Size ImageSize;
 	Size BoardSize;            // The size of the board -> Number of items by width and height
-	float SquareSize;          // The size of a square in your defined unit (point, millimeter,etc).
-	int NumFrames;              // The number of frames to use from the input for calibration
+	float SquareSize;          // The size of a square in your defined unit (point, millimeter,etc).	
+
+	float chessboard_width;
+	float chessboard_height;
 
 	int calib_flag;
 
@@ -55,6 +58,20 @@ struct CalibParams
 
 } calib_params;
 
+struct RectifiedParams
+{
+
+	Mat LeftRot, RightRot;
+	Mat LeftProjMat, RightProjMat;
+	Rect LeftValidRoi, RightValidRoi;
+	
+	Mat Disp2DepthReProjMat;
+
+	Mat LeftRMAP[2], RightRMAP[2];
+
+	bool isVerticalStereo;
+} rect_params;
+
 class StereoCalibration{
 
 public:
@@ -66,6 +83,10 @@ public:
     void WriteCalibParams();
 
     void Calibration();
+
+	double FundamentalMatrixQuality(vector<vector<Point2f> > LeftImagePoints, vector<vector<Point2f> > RightImagePoints, 
+									Mat LeftCameraMatrix, Mat RightCameraMatrix, 
+									Mat LeftDistCoeffs, Mat RightDistCoeffs, Mat F);
 
     void CvtCameraIntrins(Mat LeftCameraMatrix, Mat RightCameraMatrix);
 
@@ -79,15 +100,17 @@ public:
 
     void Routine();
 
-    OpenGlMatrixSpec StereoBind(const OpenGlMatrixSpec &LeftCamera);
-
-    void DrawChessboard();
+    OpenGlMatrixSpec StereoBind(const OpenGlMatrixSpec &LeftCamera);    
 
     void DrawAxis();
 
-    void DrawImage(const string &img_file, bool isUndistort, bool isLeftCamera);    
+    void DrawImage(const string &img_file, bool isUndistort, bool isLeftCamera);
+
+	void DrawRectifiedImage(const string &img_file, bool isLeftCamera);
 
     View *panel, *view_left, *view_right;
+	pangolin::GlTexture *gl_img_tex, *gl_chessboard_tex;
+
     GLuint ChessTexID, ImgTexID;
 
 };

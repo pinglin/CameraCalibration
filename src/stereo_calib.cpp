@@ -1,6 +1,22 @@
 #include "stereo_calib.h"
 
 int *show_idx;
+void SpecialKeyFunction(int key, int x, int y)
+{
+
+	switch(key)
+	{
+	case GLUT_KEY_LEFT:
+		if(*show_idx > 0)
+			(*show_idx)--;
+		break;
+	case GLUT_KEY_RIGHT:
+		if(*show_idx < calib_params.NumFrames-1)
+			(*show_idx)++;
+		break;
+	}
+
+}
 
 int main( int argc, char* argv[])
 {
@@ -20,39 +36,51 @@ int main( int argc, char* argv[])
     stereo_calib.InitPangolin();
     stereo_calib.InitTexture();
 
+	static Var<int> img_idx("ui.Image: ", 0, 0, calib_params.NumFrames-1);
+	static Var<bool> is_stereobind("ui.Stereo Bind", false, true);
+	static Var<bool> is_undistorted("ui.Show Undistorted images", false, true);
+	static Var<bool> show_rectified("ui.Show Rectified images", false, true);
+	static Var<bool> export_button("ui.Export Results", false, false);
+
 	while( !pangolin::ShouldQuit() )
 	{
 		if(pangolin::HasResized())
 			DisplayBase().ActivateScissorAndClear();
 
-
-		static Var<int> img_idx("ui.Image: ", 0, 0, calib_params.NumFrames-1);
-		static Var<bool> is_stereobind("ui.Stereo Bind", false, true);
-		static Var<bool> is_undistort("ui.Undistort image", false, true);
-		static Var<bool> export_button("ui.Export Results", false, false);
-
 		show_idx = (int*)img_idx.var->val;
+		if(show_rectified)
+		{
+			stereo_calib.view_left->ActivateScissorAndClear();
+			stereo_calib.DrawRectifiedImage(calib_params.LeftImageList.at(img_idx), true);
 
-		// Left view
-		stereo_calib.view_left->ActivateScissorAndClear();
-		stereo_calib.DrawImage(calib_params.LeftImageList.at(img_idx), is_undistort, true);
-		calib_params.LeftCamIntrins.Load();
-		calib_params.LeftCamExtrins.at(img_idx).Load();
-		stereo_calib.DrawAxis();
-		stereo_calib.DrawChessboard();
-
-		// Right view
-		stereo_calib.view_right->ActivateScissorAndClear();
-		stereo_calib.DrawImage(calib_params.RightImageList.at(img_idx), is_undistort, false);
-		calib_params.RightCamIntrins.Load();
-
-		if(is_stereobind)
-			stereo_calib.StereoBind(calib_params.LeftCamExtrins.at(img_idx)).Load();
+			stereo_calib.view_right->ActivateScissorAndClear();
+			stereo_calib.DrawRectifiedImage(calib_params.LeftImageList.at(img_idx), false);
+		}
 		else
-			calib_params.RightCamExtrins.at(img_idx).Load();
+		{
+			// Left view
+			stereo_calib.view_left->ActivateScissorAndClear();
+			stereo_calib.DrawImage(calib_params.LeftImageList.at(img_idx), is_undistorted, true);
+			
+			calib_params.LeftCamIntrins.Load();
+			calib_params.LeftCamExtrins.at(img_idx).Load();
+			stereo_calib.DrawAxis();
+			stereo_calib.gl_chessboard_tex->RenderPlanTexture3D(calib_params.chessboard_width, calib_params.chessboard_height);
 
-		stereo_calib.DrawAxis();
-		stereo_calib.DrawChessboard();
+			// Right view
+			stereo_calib.view_right->ActivateScissorAndClear();
+			stereo_calib.DrawImage(calib_params.RightImageList.at(img_idx), is_undistorted, false);
+			
+			calib_params.RightCamIntrins.Load();
+
+			if(is_stereobind)
+				stereo_calib.StereoBind(calib_params.LeftCamExtrins.at(img_idx)).Load();
+			else
+				calib_params.RightCamExtrins.at(img_idx).Load();
+
+			stereo_calib.DrawAxis();			
+			stereo_calib.gl_chessboard_tex->RenderPlanTexture3D(calib_params.chessboard_width, calib_params.chessboard_height);
+		}
 
 		stereo_calib.panel->Render();
 
@@ -250,37 +278,90 @@ void StereoCalibration::Calibration()
 						R,
 						T,
 						E,
-						F);
-  
-   /*Mat distCoeffs[2];
-   calib_params.LeftCameraMatrix = Mat::eye(3, 3, CV_64F);
-   calib_params.RightCameraMatrix = Mat::eye(3, 3, CV_64F);
-   calib_params.LeftDistCoeffs = distCoeffs[0];
-   calib_params.RightDistCoeffs = distCoeffs[1];
-
-   Mat R, T, E, F;
-
-   rms = stereoCalibrate(ObjectPoints,
-	   LeftImagePoints,
-	   RightImagePoints,
-	   calib_params.LeftCameraMatrix,
-	   calib_params.LeftDistCoeffs,
-	   calib_params.RightCameraMatrix,
-	   calib_params.RightDistCoeffs,
-	   calib_params.ImageSize, R, T, E, F,
-	   TermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, 1e-5),
-	   CV_CALIB_FIX_ASPECT_RATIO +
-	   CV_CALIB_ZERO_TANGENT_DIST +
-	   CV_CALIB_SAME_FOCAL_LENGTH +
-	   CV_CALIB_RATIONAL_MODEL +
-	   CV_CALIB_FIX_K3 + CV_CALIB_FIX_K4 + CV_CALIB_FIX_K5);*/
+						F, 
+						TermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, 1e-5));
 
    cout << "Stereo re-projection error reported by stereoCalibrate: " << rms << endl;
 
-
+   cout << "Fundamental Matrix reprojection error: " << FundamentalMatrixQuality(LeftImagePoints, RightImagePoints, 
+																				 calib_params.LeftCameraMatrix, calib_params.RightCameraMatrix, 
+																				 calib_params.LeftDistCoeffs, calib_params.RightDistCoeffs, F) << endl;   
+   
+   // Transfer matrix from OpenCV Mat to Pangolin matrix
    CvtCameraExtrins(LeftRVecs, LeftTVecs, RightRVecs, RightTVecs, R, T);
 
+   // Stereo rectification
+   stereoRectify(calib_params.LeftCameraMatrix,
+				calib_params.LeftDistCoeffs,
+				calib_params.RightCameraMatrix,
+				calib_params.RightDistCoeffs,
+				calib_params.ImageSize, 
+				R, 
+				T, 
+				rect_params.LeftRot,
+				rect_params.RightRot,
+				rect_params.LeftProjMat,
+				rect_params.RightProjMat,
+				rect_params.Disp2DepthReProjMat,
+				CALIB_ZERO_DISPARITY, // test later
+				0, // test later
+				calib_params.ImageSize,
+				&rect_params.LeftValidRoi, 
+				&rect_params.RightValidRoi);
+
+   rect_params.isVerticalStereo = fabs(rect_params.RightProjMat.at<double>(1, 3)) > fabs(rect_params.RightProjMat.at<double>(0, 3));
+
+   // Get the rectification re-map index
+   initUndistortRectifyMap(calib_params.LeftCameraMatrix, calib_params.LeftDistCoeffs, 
+						   rect_params.LeftRot, rect_params.LeftProjMat, 
+						   calib_params.ImageSize, CV_16SC2, rect_params.LeftRMAP[0], rect_params.LeftRMAP[1]);
+   initUndistortRectifyMap(calib_params.RightCameraMatrix, calib_params.RightDistCoeffs, 
+						   rect_params.RightRot, rect_params.RightProjMat, 
+						   calib_params.ImageSize, CV_16SC2, rect_params.RightRMAP[0], rect_params.RightRMAP[1]);
+
 }
+
+double StereoCalibration::FundamentalMatrixQuality(vector<vector<Point2f> > LeftImagePoints, vector<vector<Point2f> > RightImagePoints, 
+	Mat LeftCameraMatrix, Mat RightCameraMatrix, Mat LeftDistCoeffs, Mat RightDistCoeffs, Mat F)
+{
+
+	// CALIBRATION QUALITY CHECK
+	// because the output fundamental matrix implicitly
+	// includes all the output information,
+	// we can check the quality of calibration using the
+	// epipolar geometry constraint: m2^t*F*m1=0
+	double err = 0;
+	int npoints = 0;
+	vector<Vec3f> lines[2];	
+	for(int i = 0; i < calib_params.NumFrames; i++ )
+	{
+		int npt = (int)LeftImagePoints[i].size();
+		Mat imgpt[2];		
+
+		imgpt[0] = Mat(LeftImagePoints[i]);
+		imgpt[1] = Mat(RightImagePoints[i]);
+
+		undistortPoints(imgpt[0], imgpt[0], LeftCameraMatrix, LeftDistCoeffs, Mat(), LeftCameraMatrix);
+		undistortPoints(imgpt[1], imgpt[1], RightCameraMatrix, RightDistCoeffs, Mat(), RightCameraMatrix);
+		
+		computeCorrespondEpilines(imgpt[0], 1, F, lines[0]);
+		computeCorrespondEpilines(imgpt[1], 2, F, lines[1]);
+
+		for(int j = 0; j < npt; j++ )
+		{
+			double errij = fabs(LeftImagePoints[i][j].x*lines[1][j][0] +
+				LeftImagePoints[i][j].y*lines[1][j][1] + lines[1][j][2]) +
+				fabs(RightImagePoints[i][j].x*lines[0][j][0] +
+				RightImagePoints[i][j].y*lines[0][j][1] + lines[0][j][2]);
+			err += errij;
+		}
+		npoints += npt;
+	}
+	
+	return err/npoints;
+
+}
+
 
 void StereoCalibration::CvtCameraExtrins(const vector<Mat> &LeftRVecs, const vector<Mat> &LeftTVecs,
                                          const vector<Mat> &RightRVecs, const vector<Mat> &RightTVecs,
@@ -314,23 +395,6 @@ void StereoCalibration::CvtCameraExtrins(const vector<Mat> &LeftRVecs, const vec
             calib_params.CamRwrtLExtrins.m[col*4+row] = R.at<double>(row, col);
 
     copy(T.ptr<double>(), T.ptr<double>()+3, &calib_params.CamRwrtLExtrins.m[12]);
-
-}
-
-void SpecialKeyFunction(int key, int x, int y)
-{
-
-	switch(key)
-	{
-	case GLUT_KEY_LEFT:
-		if(*show_idx > 0)
-			(*show_idx)--;
-		break;
-	case GLUT_KEY_RIGHT:
-		if(*show_idx < calib_params.NumFrames-1)
-			(*show_idx)++;
-		break;
-	}
 
 }
 
@@ -387,6 +451,9 @@ void StereoCalibration::InitPangolin()
 void StereoCalibration::InitTexture()
 {
 
+	calib_params.chessboard_width = calib_params.SquareSize*calib_params.BoardSize.width;
+	calib_params.chessboard_height = calib_params.SquareSize*calib_params.BoardSize.height;
+
 	GLubyte* checkImage = new GLubyte[8*calib_params.BoardSize.height*8*calib_params.BoardSize.width*4];
 
     int i, j, c;
@@ -404,54 +471,13 @@ void StereoCalibration::InitTexture()
 
     glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
-    // Texture for chessboard
-    glGenTextures(1, &ChessTexID);
-    glBindTexture(GL_TEXTURE_2D, ChessTexID);
- //   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
- //   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 8*calib_params.BoardSize.width,
-                 8*calib_params.BoardSize.height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                 checkImage);
-
+    // Texture for chessboard	
+	gl_chessboard_tex = new pangolin::GlTexture(8*calib_params.BoardSize.width, 8*calib_params.BoardSize.height, GL_RGBA);
+	gl_chessboard_tex->Upload(checkImage, GL_RGBA, GL_UNSIGNED_BYTE);    
 	delete [] checkImage;
 
     // Texture for image
-    glGenTextures(1,&ImgTexID);
-    glBindTexture(GL_TEXTURE_2D, ImgTexID);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, calib_params.ImageSize.width,
-                 calib_params.ImageSize.height, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  //  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-  //  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-
-}
-
-void StereoCalibration::DrawChessboard()
-{
-
-    float w = calib_params.SquareSize*calib_params.BoardSize.width;
-    float h = calib_params.SquareSize*calib_params.BoardSize.height;
-
-	//glEnable(GL_DEPTH_TEST);
-    glEnable(GL_TEXTURE_2D);
-
-    glBindTexture(GL_TEXTURE_2D, ChessTexID);
-
-    glBegin(GL_QUADS);
-    glTexCoord2f(0.0, 0.0); glVertex3f(0.0, 0.0, 0.0);
-    glTexCoord2f(0.0, 1.0); glVertex3f(0.0, h, 0.0);
-    glTexCoord2f(1.0, 1.0); glVertex3f(w, h, 0.0);
-    glTexCoord2f(1.0, 0.0); glVertex3f(w, 0.0, 0.0);
-    glEnd();
-
-    glDisable(GL_TEXTURE_2D);
-	//glDisable(GL_DEPTH_TEST);
+	gl_img_tex = new pangolin::GlTexture(calib_params.ImageSize.width, calib_params.ImageSize.height, GL_RGB);
 
 }
 
@@ -505,31 +531,48 @@ void StereoCalibration::DrawImage(const string &img_file, bool isUndistort, bool
 
         img = undistort_img;
     }
+	
+	gl_img_tex->Upload(img.ptr<unsigned char>(), GL_RGB, GL_UNSIGNED_BYTE);
+	gl_img_tex->RenderToViewportFlipY();
 
+}
 
-    glBindTexture(GL_TEXTURE_2D, ImgTexID);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
-                    calib_params.ImageSize.width,
-                    calib_params.ImageSize.height,
-                    GL_RGB, GL_UNSIGNED_BYTE, img.ptr<unsigned char>());
+void StereoCalibration::DrawRectifiedImage(const string &img_file, bool isLeftCamera)
+{
+			
+	int w = calib_params.ImageSize.width;
+	int h = calib_params.ImageSize.height;		
+	
+	Mat canvas(w, h, CV_8UC3);
+	Mat rimg, cimg;
+	Mat img = imread(img_file, 0);	
 
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+	if(isLeftCamera)
+	{		
+		remap(img, rimg, rect_params.LeftRMAP[0], rect_params.LeftRMAP[1], CV_INTER_LINEAR);
+		cvtColor(rimg, canvas, CV_GRAY2RGB);				
+		Rect vroi(cvRound(rect_params.LeftValidRoi.x), cvRound(rect_params.LeftValidRoi.y),
+				  cvRound(rect_params.LeftValidRoi.width), cvRound(rect_params.LeftValidRoi.height)); 
+		rectangle(canvas, vroi, Scalar(0,0,255), 3, 8);
+		
+	}else
+	{
+		remap(img, rimg, rect_params.RightRMAP[0], rect_params.RightRMAP[1], CV_INTER_LINEAR);
+		cvtColor(rimg, canvas, CV_GRAY2RGB);				
+		Rect vroi(cvRound(rect_params.RightValidRoi.x), cvRound(rect_params.RightValidRoi.y),
+			cvRound(rect_params.RightValidRoi.width), cvRound(rect_params.RightValidRoi.height)); 
+		rectangle(canvas, vroi, Scalar(0,0,255), 3, 8);
+	}
 
-    glEnable(GL_TEXTURE_2D);
-    glBegin(GL_QUADS);
-    glTexCoord2f(0, 0);
-    glVertex2d(-1, 1);
-    glTexCoord2f(1, 0);
-    glVertex2d(1, 1);
-    glTexCoord2f(1, 1);
-    glVertex2d(1, -1);
-    glTexCoord2f(0, 1);
-    glVertex2d(-1, -1);
-    glEnd();
-    glDisable(GL_TEXTURE_2D);
+	if(!rect_params.isVerticalStereo)
+		for(int j = 0; j<canvas.rows; j+=16)
+			line(canvas, Point(0, j), Point(canvas.cols, j), Scalar(0, 255, 0), 1, 8);
+	else
+		for(int j=0; j<canvas.cols; j+=16)
+			line(canvas, Point(j, 0), Point(j, canvas.rows), Scalar(0, 255, 0), 1, 8);
+		
+	gl_img_tex->Upload(canvas.ptr<unsigned char>(), GL_RGB, GL_UNSIGNED_BYTE);
+	gl_img_tex->RenderToViewportFlipY();
 
 }
 
