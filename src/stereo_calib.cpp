@@ -38,8 +38,9 @@ int main( int argc, char* argv[])
 
 	static Var<int> img_idx("ui.Image: ", 0, 0, calib_params.NumFrames-1);
 	static Var<bool> is_stereobind("ui.Stereo Bind", false, true);
-	static Var<bool> is_undistorted("ui.Show Undistorted images", false, true);
-	static Var<bool> show_rectified("ui.Show Rectified images", false, true);
+	static Var<bool> is_undistorted("ui.Undistorted images", false, true);
+	static Var<bool> is_rectified("ui.Rectified images", false, true);
+	static Var<bool> disp_button("ui.Show OpenCV SBM", false, false);
 	static Var<bool> export_button("ui.Export Results", false, false);
 
 	while( !pangolin::ShouldQuit() )
@@ -48,13 +49,15 @@ int main( int argc, char* argv[])
 			DisplayBase().ActivateScissorAndClear();
 
 		show_idx = (int*)img_idx.var->val;
-		if(show_rectified)
+		if(is_rectified)
 		{
+
 			stereo_calib.view_left->ActivateScissorAndClear();
 			stereo_calib.DrawRectifiedImage(calib_params.LeftImageList.at(img_idx), true);
 
 			stereo_calib.view_right->ActivateScissorAndClear();
 			stereo_calib.DrawRectifiedImage(calib_params.LeftImageList.at(img_idx), false);
+
 		}
 		else
 		{
@@ -86,6 +89,10 @@ int main( int argc, char* argv[])
 
 		if(Pushed(export_button))
 			stereo_calib.WriteCalibParams();
+
+		if(Pushed(disp_button))
+			stereo_calib.OpenCVSBM(calib_params.LeftImageList.at(img_idx), 
+								   calib_params.RightImageList.at(img_idx));
 
 		stereo_calib.panel->Render();			
 
@@ -287,6 +294,8 @@ void StereoCalibration::Calibration()
 																				 calib_params.LeftCameraMatrix, calib_params.RightCameraMatrix, 
 																				 calib_params.LeftDistCoeffs, calib_params.RightDistCoeffs, F) << endl;   
    
+   cout << T << endl;
+
    // Transfer matrix from OpenCV Mat to Pangolin matrix
    CvtCameraExtrins(LeftRVecs, LeftTVecs, RightRVecs, RightTVecs, R, T);
 
@@ -304,7 +313,7 @@ void StereoCalibration::Calibration()
 				rect_params.RightProjMat,
 				rect_params.Disp2DepthReProjMat,
 				CALIB_ZERO_DISPARITY, // test later
-				0, // test later
+				-1, // test later
 				calib_params.ImageSize,
 				&rect_params.LeftValidRoi, 
 				&rect_params.RightValidRoi);
@@ -481,7 +490,7 @@ void StereoCalibration::InitTexture()
 
 }
 
-void StereoCalibration::DrawAxis()
+void StereoCalibration::DrawAxis() const
 {
 
     float size = calib_params.SquareSize*10.0;
@@ -509,7 +518,7 @@ void StereoCalibration::DrawAxis()
 
 }
 
-void StereoCalibration::DrawImage(const string &img_file, bool isUndistort, bool isLeftCamera)
+void StereoCalibration::DrawImage( const string &img_file, bool isUndistort, bool isLeftCamera ) const
 {
 
     Mat img = imread(img_file, CV_LOAD_IMAGE_COLOR);
@@ -537,7 +546,7 @@ void StereoCalibration::DrawImage(const string &img_file, bool isUndistort, bool
 
 }
 
-void StereoCalibration::DrawRectifiedImage(const string &img_file, bool isLeftCamera)
+void StereoCalibration::DrawRectifiedImage( const string &img_file, bool isLeftCamera ) const
 {
 			
 	int w = calib_params.ImageSize.width;
@@ -565,7 +574,7 @@ void StereoCalibration::DrawRectifiedImage(const string &img_file, bool isLeftCa
 	}
 
 	if(!rect_params.isVerticalStereo)
-		for(int j = 0; j<canvas.rows; j+=16)
+		for(int j=0; j<canvas.rows; j+=16)
 			line(canvas, Point(0, j), Point(canvas.cols, j), Scalar(0, 255, 0), 1, 8);
 	else
 		for(int j=0; j<canvas.cols; j+=16)
@@ -583,5 +592,69 @@ OpenGlMatrixSpec StereoCalibration::StereoBind(const OpenGlMatrixSpec &LeftCamer
     MatMul<4, 4, 4, double>(P.m, calib_params.CamRwrtLExtrins.m, LeftCamera.m);
 
     return P;
+
+}
+
+void StereoCalibration::OpenCVSBM( const string &left_img, const string &right_img ) const
+{
+
+	//-- 1. Read the images
+	Mat oriImgLeft, oriImgRight, imgLeft, imgRight;
+	if(calib_params.CamRwrtLExtrins.m[12] < 0)
+	{
+		oriImgLeft = imread(right_img, CV_LOAD_IMAGE_GRAYSCALE);
+		oriImgRight = imread(left_img, CV_LOAD_IMAGE_GRAYSCALE);
+
+		remap(oriImgLeft, imgLeft, rect_params.RightRMAP[0], rect_params.RightRMAP[1], CV_INTER_LINEAR);
+		remap(oriImgRight, imgRight, rect_params.LeftRMAP[0], rect_params.LeftRMAP[1], CV_INTER_LINEAR);
+	}
+	else
+	{
+		oriImgLeft = imread(left_img, CV_LOAD_IMAGE_GRAYSCALE );
+		oriImgRight = imread(right_img, CV_LOAD_IMAGE_GRAYSCALE);
+
+		remap(oriImgLeft, imgLeft, rect_params.LeftRMAP[0], rect_params.LeftRMAP[1], CV_INTER_LINEAR);
+		remap(oriImgRight, imgRight, rect_params.RightRMAP[0], rect_params.RightRMAP[1], CV_INTER_LINEAR);
+	}
+
+	//-- And create the image in which we will save our disparities
+	Mat imgDisparity16S = Mat( imgLeft.rows, imgLeft.cols, CV_16S );
+	Mat imgDisparity8U = Mat( imgLeft.rows, imgLeft.cols, CV_8UC1 );
+
+	if( !imgLeft.data || !imgRight.data )
+	{ std::cout<< " --(!) Error reading images " << std::endl; return; }
+
+	//-- 2. Call the constructor for StereoBM
+	int ndisparities = 16*5;   /**< Range of disparity */
+	int SADWindowSize = 13; /**< Size of the block window. Must be odd */
+
+	StereoBM sbm( StereoBM::BASIC_PRESET,
+		ndisparities, 
+		SADWindowSize );
+
+	sbm.state->SADWindowSize = SADWindowSize > 0 ? SADWindowSize : 9;
+	sbm.state->minDisparity = 0;
+	sbm.state->uniquenessRatio = 15;
+	sbm.state->disp12MaxDiff = 1;
+
+	//-- 3. Calculate the disparity image
+	sbm( imgLeft, imgRight, imgDisparity16S, CV_16S );
+
+	//-- Check its extreme values
+	double minVal; double maxVal;
+
+	minMaxLoc( imgDisparity16S, &minVal, &maxVal );
+	
+	cout << "Min disp: "<< minVal << " Max value: " << maxVal << endl;
+
+	//-- 4. Display it as a CV_8UC1 image
+	imgDisparity16S.convertTo( imgDisparity8U, CV_8UC1, 255.0/(maxVal - minVal));
+
+	namedWindow("Disparity", CV_WINDOW_AUTOSIZE);
+	imshow("Disparity", imgDisparity8U);
+
+	//-- 5. Save the image
+	imwrite("SBM_sample.png", imgDisparity16S);
+	waitKey(0);
 
 }

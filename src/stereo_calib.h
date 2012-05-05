@@ -102,11 +102,13 @@ public:
 
     OpenGlMatrixSpec StereoBind(const OpenGlMatrixSpec &LeftCamera);    
 
-    void DrawAxis();
+	void DrawAxis() const;
 
-    void DrawImage(const string &img_file, bool isUndistort, bool isLeftCamera);
+	void DrawImage(const string &img_file, bool isUndistort, bool isLeftCamera) const;
 
-	void DrawRectifiedImage(const string &img_file, bool isLeftCamera);
+	void DrawRectifiedImage(const string &img_file, bool isLeftCamera) const;
+
+	void OpenCVSBM(const string &left_img, const string &right_img) const;
 
     View *panel, *view_left, *view_right;
 	pangolin::GlTexture *gl_img_tex, *gl_chessboard_tex;
