@@ -16,69 +16,47 @@ using namespace cv;
 using namespace std;
 using namespace pangolin;
 
-const int PanelWidth = 150;
-const int ImageWidth = 720;
-const int ImageHeight = 576;
-
 struct CalibParams
 {
-	int NumFrames;              // The number of frames to use from the input for calibration
 
-	Size ImageSize;
-	Size BoardSize;            // The size of the board -> Number of items by width and height
-	float SquareSize;          // The size of a square in your defined unit (point, millimeter,etc).	
+	vector<string> ImageList;	
 
-	float chessboard_width;
-	float chessboard_height;
+	Mat CameraMatrix;
+	Mat DistCoeffs;	
 
-	int calib_flag;
+};
 
-	bool calibZeroTangentDist; // Assume zero tangential distortion
-	bool calibFixPrincipalPoint;// Fix the principal point at the center
+struct StereoParams
+{
+	
+	Mat R, T, E, F;
 
-	bool flipVertical;          // Flip the captured images around the horizontal axis
-
-	string outputFileName;      // The name of the file where to write
-	bool showUndistorsed;       // Show undistorted images after calibration
-	string input;               // The input ->
-
-	vector<string> LeftImageList;
-	vector<string> RightImageList;
-
-	Mat LeftCameraMatrix, RightCameraMatrix;
-	Mat LeftDistCoeffs, RightDistCoeffs;
-
-	OpenGlMatrixSpec LeftCamIntrins;  // Row-major order
-	OpenGlMatrixSpec RightCamIntrins;
-
-	vector<OpenGlMatrixSpec> LeftCamExtrins;  // Row-major order
-	vector<OpenGlMatrixSpec> RightCamExtrins;
-
-	OpenGlMatrixSpec CamRwrtLExtrins;
-
-} calib_params;
+};
 
 struct RectifiedParams
 {
 
 	Mat LeftRot, RightRot;
-	Mat LeftProjMat, RightProjMat;
-	Rect LeftValidRoi, RightValidRoi;
+	Mat LeftProj, RightProj;
+	Rect LeftRoi, RightRoi;
 	
 	Mat Disp2DepthReProjMat;
 
 	Mat LeftRMAP[2], RightRMAP[2];
 
 	bool isVerticalStereo;
-} rect_params;
+};
 
-class StereoCalibration{
+class CameraCalibration
+{
 
 public:
 
-    StereoCalibration();
+	CameraCalibration();
 
-    void ReadCalibParams(string &img_xml);
+	void ReadMonoCalibParams(string &img_xml);
+
+	void ReadStereoCalibParams(string &img_xml);
 
     void WriteCalibParams();
 
@@ -96,9 +74,7 @@ public:
 
     void InitPangolin();
 
-    void InitTexture();
-
-    void Routine();
+    void InitTexture();    
 
     OpenGlMatrixSpec StereoBind(const OpenGlMatrixSpec &LeftCamera);    
 
@@ -110,9 +86,35 @@ public:
 
 	void OpenCVSBM(const string &left_img, const string &right_img) const;
 
-    View *panel, *view_left, *view_right;
+	CalibParams *calib_params;	
+
+    View *panel, *view;
 	pangolin::GlTexture *gl_img_tex, *gl_chessboard_tex;
 
-    GLuint ChessTexID, ImgTexID;
+	inline int getNumFrames() const { return NumFrames; }
+
+	inline Size getBoardTexSize() const { return BoardTexSize; }
+
+
+private:
+
+	int NumFrames;              // The number of frames to use from the input for calibration
+	
+	Size BoardSize;            // The size of the board -> Number of items by width and height
+	float SquareSize;          // The size of a square in your defined unit (point, millimeter,etc).	
+
+	Size BoardTexSize;	// OpenGL texture for the chessboard rendering
+
+	const int PanelWidth = 150;	
+	Size ImageSize;
+
+	// Pangolin matrix
+	OpenGlMatrixSpec LeftCamIntrins;  // Row-major order
+	OpenGlMatrixSpec RightCamIntrins;
+
+	vector<OpenGlMatrixSpec> LeftCamExtrins;  // Row-major order
+	vector<OpenGlMatrixSpec> RightCamExtrins;
+
+	OpenGlMatrixSpec CamRwrtLExtrins;
 
 };

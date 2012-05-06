@@ -27,16 +27,34 @@ int main( int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
 
-    StereoCalibration stereo_calib;
+	string mode(argv[1]);
+	bool stereo_mode = false;
 
-    string xml_input(argv[1]);
-    stereo_calib.ReadCalibParams(xml_input);
+	CameraCalibration camera_calib;
+	if(mode == "-stereo")
+	{
+		stereo_mode = true;
 
-    stereo_calib.Calibration();
-    stereo_calib.InitPangolin();
-    stereo_calib.InitTexture();
+		// Two camera calibration parameter sets
+		camera_calib.calib_params = new CalibParams[2];
 
-	static Var<int> img_idx("ui.Image: ", 0, 0, calib_params.NumFrames-1);
+		string xml_input(argv[2]);
+		camera_calib.ReadMonoCalibParams(xml_input);	
+
+		camera_calib.Calibration();
+
+	}	
+	else
+	{		
+		string xml_input(argv[1]);
+		camera_calib.ReadStereoCalibParams(xml_input);	
+
+	}    
+    
+    camera_calib.InitPangolin();
+    camera_calib.InitTexture();
+
+	static Var<int> img_idx("ui.Image: ", 0, 0, camera_calib.getNumFrames()-1);
 	static Var<bool> is_stereobind("ui.Stereo Bind", false, true);
 	static Var<bool> is_undistorted("ui.Undistorted images", false, true);
 	static Var<bool> is_rectified("ui.Rectified images", false, true);
@@ -52,49 +70,51 @@ int main( int argc, char* argv[])
 		if(is_rectified)
 		{
 
-			stereo_calib.view_left->ActivateScissorAndClear();
-			stereo_calib.DrawRectifiedImage(calib_params.LeftImageList.at(img_idx), true);
+			camera_calib.view_left->ActivateScissorAndClear();
+			camera_calib.DrawRectifiedImage(camera_calib.calib_params[0].ImageList.at(img_idx), true);
 
-			stereo_calib.view_right->ActivateScissorAndClear();
-			stereo_calib.DrawRectifiedImage(calib_params.LeftImageList.at(img_idx), false);
+			camera_calib.view_right->ActivateScissorAndClear();
+			camera_calib.DrawRectifiedImage(camera_calib.calib_params[1].ImageList.at(img_idx), false);
 
 		}
 		else
 		{
 			// Left view
-			stereo_calib.view_left->ActivateScissorAndClear();
-			stereo_calib.DrawImage(calib_params.LeftImageList.at(img_idx), is_undistorted, true);
+			camera_calib.view_left->ActivateScissorAndClear();
+			camera_calib.DrawImage(camera_calib.calib_params[0].ImageList.at(img_idx), is_undistorted, true);
 			
-			calib_params.LeftCamIntrins.Load();
-			calib_params.LeftCamExtrins.at(img_idx).Load();
-			stereo_calib.DrawAxis();
-			stereo_calib.gl_chessboard_tex->RenderPlanTexture3D(calib_params.chessboard_width, calib_params.chessboard_height);
+			camera_calib.LeftCamIntrins.Load();
+			camera_calib.LeftCamExtrins.at(img_idx).Load();
+			camera_calib.DrawAxis();
+			camera_calib.gl_chessboard_tex->RenderPlanTexture3D(camera_calib.getBoardTexSize().width, 
+																camera_calib.getBoardTexSize().height);
 
 			// Right view
-			stereo_calib.view_right->ActivateScissorAndClear();
-			stereo_calib.DrawImage(calib_params.RightImageList.at(img_idx), is_undistorted, false);
+			camera_calib.view_right->ActivateScissorAndClear();
+			camera_calib.DrawImage(calib_params.RightImageList.at(img_idx), is_undistorted, false);
 			
 			calib_params.RightCamIntrins.Load();
 
 			if(is_stereobind)
-				stereo_calib.StereoBind(calib_params.LeftCamExtrins.at(img_idx)).Load();
+				camera_calib.StereoBind(calib_params.LeftCamExtrins.at(img_idx)).Load();
 			else
 				calib_params.RightCamExtrins.at(img_idx).Load();
 
-			stereo_calib.DrawAxis();			
-			stereo_calib.gl_chessboard_tex->RenderPlanTexture3D(calib_params.chessboard_width, calib_params.chessboard_height);
+			camera_calib.DrawAxis();			
+			camera_calib.gl_chessboard_tex->RenderPlanTexture3D(camera_calib.getBoardTexSize().width, 
+																camera_calib.getBoardTexSize().height);
 		}
 
-		stereo_calib.panel->Render();
+		camera_calib.panel->Render();
 
 		if(Pushed(export_button))
-			stereo_calib.WriteCalibParams();
+			camera_calib.WriteCalibParams();
 
 		if(Pushed(disp_button))
-			stereo_calib.OpenCVSBM(calib_params.LeftImageList.at(img_idx), 
+			camera_calib.OpenCVSBM(calib_params.LeftImageList.at(img_idx), 
 								   calib_params.RightImageList.at(img_idx));
 
-		stereo_calib.panel->Render();			
+		camera_calib.panel->Render();			
 
 		// Swap frames and Process Events
 		glutSwapBuffers();
@@ -105,12 +125,12 @@ int main( int argc, char* argv[])
 
 }
 
-StereoCalibration::StereoCalibration()
+CameraCalibration::CameraCalibration()
 {
 
 }
 
-void StereoCalibration::ReadCalibParams(string &img_xml)
+void CameraCalibration::ReadMonoCalibParams( string &img_xml )
 {
 
     FileStorage fs(img_xml, FileStorage::READ); // Read the settings
@@ -120,26 +140,80 @@ void StereoCalibration::ReadCalibParams(string &img_xml)
         exit(EXIT_FAILURE);
     }
 
-    calib_params.BoardSize = Size((int)fs["BoardSize_Width"], (int)fs["BoardSize_Height"]);
-    calib_params.SquareSize = (float)fs["Square_Size"];
+    BoardSize = Size((int)fs["BoardSizeWidth"], (int)fs["BoardSizeHeight"]);
+    SquareSize = (float)fs["SquareSize"];
 
-    FileNode left_imgs = fs["left_images"];
-    for(FileNodeIterator itr = left_imgs.begin(); itr != left_imgs.end(); itr++)
-        calib_params.LeftImageList.push_back((string)*itr);
+    FileNode imgs = fs["Images"];
+    for(FileNodeIterator itr = imgs.begin(); itr != imgs.end(); itr++)	
+        calib_params[0].ImageList.push_back((string)*itr);
+	
+	// Check if all image data have the same size.
+	Mat img = imread(calib_params[0].ImageList.front(), CV_LOAD_IMAGE_GRAYSCALE);
+	ImageSize = Size(img.rows, img.cols);
+	for(int i=1; i<calib_params[0].ImageList.size(); i++)
+	{
+		img = imread(calib_params[0].ImageList.at(i), CV_LOAD_IMAGE_GRAYSCALE);
+		assert(ImageSize == Size(img.rows, img.cols));
+		ImageSize = Size(img.rows, img.cols);
+	}
 
-    FileNode right_imgs = fs["right_images"];
-    for(FileNodeIterator itr = right_imgs.begin(); itr != right_imgs.end(); itr++)
-        calib_params.RightImageList.push_back((string)*itr);
+    NumFrames = calib_params[0].ImageList.size();
 
-    assert(calib_params.LeftImageList.size() == calib_params.RightImageList.size());
-
-    calib_params.NumFrames = calib_params.RightImageList.size();
-
-    fs.release();            
+    fs.release();
 
 }
 
-void StereoCalibration::WriteCalibParams()
+
+void CameraCalibration::ReadStereoCalibParams( string &img_xml )
+{
+
+	FileStorage fs(img_xml, FileStorage::READ); // Read the settings
+	if (!fs.isOpened())
+	{
+		cout << "Could not open the configuration file: \"" << img_xml << "\"" << endl;
+		exit(EXIT_FAILURE);
+	}
+
+	BoardSize = Size((int)fs["BoardSizeWidth"], (int)fs["BoardSizeHeight"]);
+	SquareSize = (float)fs["SquareSize"];
+
+	FileNode left_imgs = fs["LeftImages"];
+	for(FileNodeIterator itr = left_imgs.begin(); itr != left_imgs.end(); itr++)
+		calib_params[0].ImageList.push_back((string)*itr);
+
+	FileNode right_imgs = fs["RightImages"];
+	for(FileNodeIterator itr = right_imgs.begin(); itr != right_imgs.end(); itr++)
+		calib_params[1].ImageList.push_back((string)*itr);
+
+	// Check if the number of left and right images are the same
+	assert(calib_params[0].ImageList.size() == calib_params[1].ImageList.size());
+	NumFrames = calib_params[0].ImageList.size();
+
+	// Check if all image data have the same size.
+	Mat img = imread(calib_params[0].ImageList.front(), CV_LOAD_IMAGE_GRAYSCALE);
+	ImageSize = Size(img.rows, img.cols);
+	for(int i=1; i<calib_params[0].ImageList.size(); i++)
+	{
+		img = imread(calib_params[0].ImageList.at(i), CV_LOAD_IMAGE_GRAYSCALE);
+		assert(ImageSize == Size(img.rows, img.cols));
+		ImageSize = Size(img.rows, img.cols);
+	}
+	
+	Mat img = imread(calib_params[1].ImageList.front(), CV_LOAD_IMAGE_GRAYSCALE);
+	ImageSize = Size(img.rows, img.cols);
+	for(int i=1; i<calib_params[1].ImageList.size(); i++)
+	{
+		img = imread(calib_params[1].ImageList.at(i), CV_LOAD_IMAGE_GRAYSCALE);
+		assert(ImageSize == Size(img.rows, img.cols));
+		ImageSize = Size(img.rows, img.cols);
+	}
+
+	fs.release();            
+
+}
+
+
+void CameraCalibration::WriteCalibParams()
 {
 
     time_t t;
@@ -166,10 +240,12 @@ void StereoCalibration::WriteCalibParams()
     fs << "RightCameraMatrix" << calib_params.RightCameraMatrix;
     fs << "RightDistortion" << calib_params.RightDistCoeffs;
 
-    fs << "RightToLeftMatrix" << Mat(4, 4, CV_64F, calib_params.CamRwrtLExtrins.m);
+    fs << "StereoRigRotation" << calib_params.R;
+	fs << "StereoRigTranslation" << calib_params.T;
+	
 }
 
-void StereoCalibration::Calibration()
+void CameraCalibration::Calibration()
 {
 
     vector<vector<Point2f> > LeftImagePoints, RightImagePoints;
@@ -272,8 +348,7 @@ void StereoCalibration::Calibration()
                          CV_CALIB_FIX_K6);
 
    cout << "Right camera re-projection error reported by calibrateCamera: "<< rms << endl;
-
-   Mat R, T, E, F;
+   
    rms = stereoCalibrate(ObjectPoints,
 						LeftImagePoints,
 						RightImagePoints,
@@ -282,22 +357,20 @@ void StereoCalibration::Calibration()
 						calib_params.RightCameraMatrix,
 						calib_params.RightDistCoeffs,
 						calib_params.ImageSize,
-						R,
-						T,
-						E,
-						F, 
+						calib_params.R,
+						calib_params.T,
+						calib_params.E,
+						calib_params.F, 
 						TermCriteria(CV_TERMCRIT_ITER+CV_TERMCRIT_EPS, 100, 1e-5));
 
    cout << "Stereo re-projection error reported by stereoCalibrate: " << rms << endl;
 
    cout << "Fundamental Matrix reprojection error: " << FundamentalMatrixQuality(LeftImagePoints, RightImagePoints, 
 																				 calib_params.LeftCameraMatrix, calib_params.RightCameraMatrix, 
-																				 calib_params.LeftDistCoeffs, calib_params.RightDistCoeffs, F) << endl;   
-   
-   cout << T << endl;
+																				 calib_params.LeftDistCoeffs, calib_params.RightDistCoeffs, calib_params.F) << endl;        
 
    // Transfer matrix from OpenCV Mat to Pangolin matrix
-   CvtCameraExtrins(LeftRVecs, LeftTVecs, RightRVecs, RightTVecs, R, T);
+   CvtCameraExtrins(LeftRVecs, LeftTVecs, RightRVecs, RightTVecs, calib_params.R, calib_params.T);
 
    // Stereo rectification
    stereoRectify(calib_params.LeftCameraMatrix,
@@ -305,15 +378,15 @@ void StereoCalibration::Calibration()
 				calib_params.RightCameraMatrix,
 				calib_params.RightDistCoeffs,
 				calib_params.ImageSize, 
-				R, 
-				T, 
+				calib_params.R, 
+				calib_params.T, 
 				rect_params.LeftRot,
 				rect_params.RightRot,
 				rect_params.LeftProjMat,
 				rect_params.RightProjMat,
 				rect_params.Disp2DepthReProjMat,
 				CALIB_ZERO_DISPARITY, // test later
-				-1, // test later
+				1, // test later
 				calib_params.ImageSize,
 				&rect_params.LeftValidRoi, 
 				&rect_params.RightValidRoi);
@@ -330,7 +403,7 @@ void StereoCalibration::Calibration()
 
 }
 
-double StereoCalibration::FundamentalMatrixQuality(vector<vector<Point2f> > LeftImagePoints, vector<vector<Point2f> > RightImagePoints, 
+double CameraCalibration::FundamentalMatrixQuality(vector<vector<Point2f> > LeftImagePoints, vector<vector<Point2f> > RightImagePoints, 
 	Mat LeftCameraMatrix, Mat RightCameraMatrix, Mat LeftDistCoeffs, Mat RightDistCoeffs, Mat F)
 {
 
@@ -372,7 +445,7 @@ double StereoCalibration::FundamentalMatrixQuality(vector<vector<Point2f> > Left
 }
 
 
-void StereoCalibration::CvtCameraExtrins(const vector<Mat> &LeftRVecs, const vector<Mat> &LeftTVecs,
+void CameraCalibration::CvtCameraExtrins(const vector<Mat> &LeftRVecs, const vector<Mat> &LeftTVecs,
                                          const vector<Mat> &RightRVecs, const vector<Mat> &RightTVecs,
                                          const Mat &R, const Mat &T)
 {
@@ -407,7 +480,7 @@ void StereoCalibration::CvtCameraExtrins(const vector<Mat> &LeftRVecs, const vec
 
 }
 
-void StereoCalibration::InitPangolin()
+void CameraCalibration::InitPangolin()
 {
 
     const int WindowWidth = (ImageWidth)*2+PanelWidth-1;
@@ -457,7 +530,7 @@ void StereoCalibration::InitPangolin()
 	glutSpecialFunc(&SpecialKeyFunction);
 }
 
-void StereoCalibration::InitTexture()
+void CameraCalibration::InitTexture()
 {
 
 	calib_params.chessboard_width = calib_params.SquareSize*calib_params.BoardSize.width;
@@ -490,7 +563,7 @@ void StereoCalibration::InitTexture()
 
 }
 
-void StereoCalibration::DrawAxis() const
+void CameraCalibration::DrawAxis() const
 {
 
     float size = calib_params.SquareSize*10.0;
@@ -518,7 +591,7 @@ void StereoCalibration::DrawAxis() const
 
 }
 
-void StereoCalibration::DrawImage( const string &img_file, bool isUndistort, bool isLeftCamera ) const
+void CameraCalibration::DrawImage( const string &img_file, bool isUndistort, bool isLeftCamera ) const
 {
 
     Mat img = imread(img_file, CV_LOAD_IMAGE_COLOR);
@@ -546,7 +619,7 @@ void StereoCalibration::DrawImage( const string &img_file, bool isUndistort, boo
 
 }
 
-void StereoCalibration::DrawRectifiedImage( const string &img_file, bool isLeftCamera ) const
+void CameraCalibration::DrawRectifiedImage( const string &img_file, bool isLeftCamera ) const
 {
 			
 	int w = calib_params.ImageSize.width;
@@ -585,7 +658,7 @@ void StereoCalibration::DrawRectifiedImage( const string &img_file, bool isLeftC
 
 }
 
-OpenGlMatrixSpec StereoCalibration::StereoBind(const OpenGlMatrixSpec &LeftCamera)
+OpenGlMatrixSpec CameraCalibration::StereoBind(const OpenGlMatrixSpec &LeftCamera)
 {
 
     OpenGlMatrixSpec P = IdentityMatrix(GlModelViewStack);
@@ -595,7 +668,7 @@ OpenGlMatrixSpec StereoCalibration::StereoBind(const OpenGlMatrixSpec &LeftCamer
 
 }
 
-void StereoCalibration::OpenCVSBM( const string &left_img, const string &right_img ) const
+void CameraCalibration::OpenCVSBM( const string &left_img, const string &right_img ) const
 {
 
 	//-- 1. Read the images
