@@ -6,6 +6,7 @@
 
 #include <pangolin/pangolin.h>
 #include <pangolin/simple_math.h>
+#include <pangolin/timer.h>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -74,9 +75,9 @@ public:
 
     OpenGlMatrixSpec StereoBind(const OpenGlMatrixSpec &LeftCamera);    
 
-	void DrawRectifiedImage(const string &img_file, bool isLeftCamera) const;
+	void DrawRectifiedImage(const int c_idx, const int img_idx) const;
 
-	void DrawChessboardAndImage(int c_idx, int img_idx, bool is_undistorted, bool is_stereobind);
+	void DrawChessboardAndImage(const int c_idx, const int img_idx, const bool is_undistorted, const bool is_stereobind);
 
 	//void OpenCVSBM(const string &left_img, const string &right_img) const;
 
@@ -109,6 +110,9 @@ private:
 
 	// Pangolin OpenGL texture
 	float BoardTexWdith, BoardTexHeight;	// OpenGL texture for the chessboard rendering
+
+	void CheckImageSizeConsistency();
+
     void InitTexture();
 
 	void DrawAxis() const;

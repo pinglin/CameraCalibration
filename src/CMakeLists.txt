@@ -77,10 +77,10 @@ ENDIF(MSVC)
 ADD_EXECUTABLE(opencv_calib opencv_calib.cpp)
 TARGET_LINK_LIBRARIES(opencv_calib ${OpenCV_LIBS})
 
-ADD_EXECUTABLE(stereo_calib stereo_calib.cpp stereo_calib.h)
-INCLUDE_DIRECTORIES(stereo_calib ${Pangolin_INCLUDE_DIR}
+ADD_EXECUTABLE(CameraClibrator CameraCalibrator.cpp CameraCalibrator.h)
+INCLUDE_DIRECTORIES(CameraClibrator ${Pangolin_INCLUDE_DIR}
                                  ${FREEGLUT_INCLUDE_DIR} 
                                  ${GLEW_INCLUDE_DIR} 
                                  ${Boost_INCLUDE_DIRS}
                                  ${OpenCV_INCLUDE_DIR})
-TARGET_LINK_LIBRARIES(stereo_calib ${OpenCV_LIBS} ${Pangolin_LIBRARY} ${Boost_LIBRARIES} ${GLEW_LIBRARY} ${FREEGLUT_LIBRARY})
+TARGET_LINK_LIBRARIES(CameraClibrator ${OpenCV_LIBS} ${Pangolin_LIBRARY} ${Boost_LIBRARIES} ${GLEW_LIBRARY} ${FREEGLUT_LIBRARY})

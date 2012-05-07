@@ -1,4 +1,4 @@
-#include "stereo_calib.h"
+#include "CameraCalibrator.h"
 
 int *show_idx;
 int num_frames;
@@ -48,7 +48,7 @@ int main( int argc, char* argv[])
 		static Var<bool> is_stereobind("ui.Stereo Bind", false, true);
 		static Var<bool> is_undistorted("ui.Undistorted images", false, true);
 		static Var<bool> is_rectified("ui.Rectified images", false, true);
-		static Var<bool> disp_button("ui.Show OpenCV SBM", false, false);
+		//static Var<bool> disp_button("ui.Show OpenCV SBM", false, false);
 		static Var<bool> export_button("ui.Export Results", false, false);
 
 		while( !pangolin::ShouldQuit() )
@@ -59,12 +59,8 @@ int main( int argc, char* argv[])
 			show_idx = (int*)img_idx.var->val;
 			if(is_rectified)
 			{
-
-				camera_calib.view[0]->ActivateScissorAndClear();
-				camera_calib.DrawRectifiedImage(camera_calib.calib_params[0].ImageList.at(img_idx), true);
-
-				camera_calib.view[1]->ActivateScissorAndClear();
-				camera_calib.DrawRectifiedImage(camera_calib.calib_params[1].ImageList.at(img_idx), false);
+				for(int c_idx=0; c_idx<2; c_idx++)					
+					camera_calib.DrawRectifiedImage(c_idx, img_idx);	
 
 			}
 			else
@@ -98,10 +94,7 @@ int main( int argc, char* argv[])
 		string xml_input(argv[1]);
 		camera_calib.ReadStereoCalibParams(xml_input);	
 
-	}    
-    
-    
-	
+	}            	
 
     return 0;
 
@@ -183,25 +176,12 @@ void CameraCalibration::ReadStereoCalibParams( string &img_xml )
 	// Check if the number of left and right images are the same
 	assert(calib_params[0].ImageList.size() == calib_params[1].ImageList.size());
 	NumFrames = calib_params[0].ImageList.size();
-
-	// Check if all image data have the same size.
+	
 	Mat img = imread(data_path+"/"+calib_params[0].ImageList.front(), CV_LOAD_IMAGE_GRAYSCALE);
 	ImageSize = Size(img.cols, img.rows);
-	for(int i=1; i<calib_params[0].ImageList.size(); i++)
-	{
-		img = imread(data_path+"/"+calib_params[0].ImageList.at(i), CV_LOAD_IMAGE_GRAYSCALE);
-		assert(ImageSize == Size(img.cols, img.rows));
-		ImageSize = Size(img.cols, img.rows);
-	}
-	
-	img = imread(data_path+"/"+calib_params[1].ImageList.front(), CV_LOAD_IMAGE_GRAYSCALE);
-	ImageSize = Size(img.cols, img.rows);
-	for(int i=1; i<calib_params[1].ImageList.size(); i++)
-	{
-		img = imread(data_path+"/"+calib_params[1].ImageList.at(i), CV_LOAD_IMAGE_GRAYSCALE);
-		assert(ImageSize == Size(img.cols, img.rows));
-		ImageSize = Size(img.cols, img.rows);
-	}
+
+	// Check if all image data have the same size, if necessary.
+	CheckImageSizeConsistency();
 
 	fs.release();            
 
@@ -406,6 +386,8 @@ void CameraCalibration::StereoCalibration()
 
 	// Transfer matrix from OpenCV Mat to Pangolin matrix
 	CvtCameraExtrins(RVecs, TVecs);
+	
+	Timer PangolinTimer;
 
 	// Stereo rectification
 	stereoRectify(calib_params[0].CameraMatrix,
@@ -425,6 +407,8 @@ void CameraCalibration::StereoCalibration()
 		ImageSize,
 		&rect_params->LeftRoi, 
 		&rect_params->RightRoi);
+
+	cout << "\nStereo rectification using calibration spent: " << PangolinTimer.ElapsedInMilliSec() << "ms." << endl;
 
 	rect_params->isVerticalStereo = fabs(rect_params->RightProj.at<double>(1, 3)) > 
 										fabs(rect_params->RightProj.at<double>(0, 3));
@@ -583,7 +567,35 @@ void CameraCalibration::InitPangolin(int PanelWidth)
 	glutSpecialFunc(&SpecialKeyFunction);
 }
 
-void CameraCalibration::DrawChessboardAndImage(int c_idx, int img_idx, bool is_undistorted, bool is_stereobind)
+void CameraCalibration::DrawAxis() const
+{
+
+    float size = SquareSize*10.0;
+
+    glEnable(GL_DEPTH_TEST);
+    glBegin(GL_LINES);
+
+    // x-axis
+    glColor3f(0.5f, 0, 0);
+    glVertex3f(0, 0, 0);
+    glVertex3f(size, 0, 0);
+
+    // y-axis
+    glColor3f(0, 0.5f, 0);
+    glVertex3f(0, 0, 0);
+    glVertex3f(0, size, 0);
+
+    // z-axis
+    glColor3f(0, 0, 0.5f);
+    glVertex3f(0, 0, 0);
+    glVertex3f(0, 0, size);
+
+    glEnd();
+    glDisable(GL_DEPTH_TEST);
+
+}
+
+void CameraCalibration::DrawChessboardAndImage(const int c_idx, const int img_idx, const bool is_undistorted, const bool is_stereobind)
 {
 	
     Mat img = imread(data_path+"/"+calib_params[c_idx].ImageList.at(img_idx), CV_LOAD_IMAGE_COLOR);
@@ -623,45 +635,16 @@ void CameraCalibration::DrawChessboardAndImage(int c_idx, int img_idx, bool is_u
 
 }
 
-void CameraCalibration::DrawAxis() const
+void CameraCalibration::DrawRectifiedImage(const int c_idx, const int img_idx) const
 {
 
-    float size = SquareSize*10.0;
-
-    glEnable(GL_DEPTH_TEST);
-    glBegin(GL_LINES);
-
-    // x-axis
-    glColor3f(0.5f, 0, 0);
-    glVertex3f(0, 0, 0);
-    glVertex3f(size, 0, 0);
-
-    // y-axis
-    glColor3f(0, 0.5f, 0);
-    glVertex3f(0, 0, 0);
-    glVertex3f(0, size, 0);
-
-    // z-axis
-    glColor3f(0, 0, 0.5f);
-    glVertex3f(0, 0, 0);
-    glVertex3f(0, 0, size);
-
-    glEnd();
-    glDisable(GL_DEPTH_TEST);
-
-}
-
-void CameraCalibration::DrawRectifiedImage( const string &img_file, bool isLeftCamera ) const
-{
-			
-	int w = ImageSize.width;
-	int h = ImageSize.height;		
+	view[c_idx]->ActivateScissorAndClear();		
+	Mat img = imread(data_path+"/"+calib_params[c_idx].ImageList.at(img_idx), 0);		
 	
-	Mat canvas(w, h, CV_8UC3);
+	Mat canvas(ImageSize.width, ImageSize.height, CV_8UC3);
 	Mat rimg;
-	Mat img = imread(img_file, 0);	
-
-	if(isLeftCamera)
+	
+	if(!c_idx)
 	{		
 		remap(img, rimg, rect_params->LeftRMAP[0], rect_params->LeftRMAP[1], CV_INTER_LINEAR);
 		cvtColor(rimg, canvas, CV_GRAY2RGB);				
@@ -727,6 +710,38 @@ void CameraCalibration::InitTexture()
 
 	// Texture for image
 	gl_img_tex = new pangolin::GlTexture(ImageSize.width, ImageSize.height, GL_RGB);
+
+}
+
+void CameraCalibration::CheckImageSizeConsistency()
+{
+
+	if(stereo_mode)
+	{
+		for(int c_idx=0; c_idx<2; c_idx++)
+		{
+			Mat img = imread(data_path+"/"+calib_params[c_idx].ImageList.front(), CV_LOAD_IMAGE_GRAYSCALE);
+			ImageSize = Size(img.cols, img.rows);
+			for(int i=1; i<calib_params[c_idx].ImageList.size(); i++)
+			{
+				img = imread(data_path+"/"+calib_params[c_idx].ImageList.at(i), CV_LOAD_IMAGE_GRAYSCALE);
+				assert(ImageSize == Size(img.cols, img.rows));
+				ImageSize = Size(img.cols, img.rows);
+			}
+		}
+	}
+	else
+	{
+		Mat img = imread(data_path+"/"+calib_params[0].ImageList.front(), CV_LOAD_IMAGE_GRAYSCALE);
+		ImageSize = Size(img.cols, img.rows);
+		for(int i=1; i<calib_params[0].ImageList.size(); i++)
+		{
+			img = imread(data_path+"/"+calib_params[0].ImageList.at(i), CV_LOAD_IMAGE_GRAYSCALE);
+			assert(ImageSize == Size(img.cols, img.rows));
+			ImageSize = Size(img.cols, img.rows);
+		}
+
+	}
 
 }
 

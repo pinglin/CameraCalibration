@@ -15,13 +15,13 @@ IF(MSVC)
          FIND_LIBRARY( FREEGLUT_LIBRARY
             NAMES freeglut
             PATHS
-            $ENV{ProgramW6432}/FREEGLUT/lib/x64
+            $ENV{ProgramW6432}/FREEGLUT/lib
             DOC "The FREEGLUT 64-bit library")
       ELSE(CMAKE_CL_64)
          FIND_LIBRARY( FREEGLUT_LIBRARY
             NAMES freeglut
             PATHS
-            $ENV{PROGRAMFILES}/FREEGLUT/lib/x86
+            $ENV{PROGRAMFILES}/FREEGLUT/lib
             DOC "The FREEGLUT 32-bit library")
       ENDIF(CMAKE_CL_64)
    ELSE(BUILD_SHARED_LIB OR USE_SHARED_LIB)
@@ -29,13 +29,13 @@ IF(MSVC)
          FIND_LIBRARY( FREEGLUT_LIBRARY
             NAMES freeglut_static
             PATHS
-            $ENV{ProgramW6432}/FREEGLUT/lib/x64
+            $ENV{ProgramW6432}/FREEGLUT/lib
             DOC "The FREEGLUT 64-bit library")
       ELSE(CMAKE_CL_64)
          FIND_LIBRARY( FREEGLUT_LIBRARY
             NAMES freeglut_static
             PATHS
-            $ENV{PROGRAMFILES}/FREEGLUT/lib/x86
+            $ENV{PROGRAMFILES}/FREEGLUT/lib
             DOC "The FREEGLUT 32-bit library")
       ENDIF(CMAKE_CL_64)
    ENDIF(BUILD_SHARED_LIB OR USE_SHARED_LIB)

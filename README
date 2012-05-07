@@ -1,1 +1,5 @@
-A collection of programs for camera calibration
+This is a camera calibration toolkit using Pangolin and OpenCV. It basically uses camera clibration functinos provided by OpenCV and visualizes the result by overlapping a OpenGL chessboard using Pangolin.
+
+Dependencies:
+Pangolin: https://github.com/pinglin/Pangolin
+OpenCV: http://opencv.willowgarage.com 
