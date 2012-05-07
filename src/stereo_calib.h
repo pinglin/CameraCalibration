@@ -91,8 +91,6 @@ public:
 
 	inline int getNumFrames() const { return NumFrames; }
 
-	inline Size getBoardTexSize() const { return BoardTexSize; }
-
 	// Pangolin matrix
 	OpenGlMatrixSpec *CamIntrins;  // Row-major order
 	vector<OpenGlMatrixSpec> *CamExtrins;  // Row-major order
@@ -107,10 +105,10 @@ private:
 	
 	Size BoardSize;            // The size of the board -> Number of items by width and height
 	float SquareSize;          // The size of a square in your defined unit (point, millimeter,etc).	
-	Size BoardTexSize;	// OpenGL texture for the chessboard rendering
 	Size ImageSize;
 
 	// Pangolin OpenGL texture
+	float BoardTexWdith, BoardTexHeight;	// OpenGL texture for the chessboard rendering
     void InitTexture();
 
 	void DrawAxis() const;

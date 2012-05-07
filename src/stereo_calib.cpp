@@ -127,7 +127,8 @@ void CameraCalibration::ReadMonoCalibParams( string &img_xml )
     BoardSize = Size((int)fs["BoardSizeWidth"], (int)fs["BoardSizeHeight"]);
     SquareSize = (float)fs["SquareSize"];
 
-	BoardTexSize = Size(SquareSize*BoardSize.width, SquareSize*BoardSize.height);
+	BoardTexWdith = SquareSize*BoardSize.width;
+	BoardTexHeight = SquareSize*BoardSize.height;
 
     FileNode imgs = fs["Images"];
     for(FileNodeIterator itr = imgs.begin(); itr != imgs.end(); itr++)	
@@ -168,7 +169,8 @@ void CameraCalibration::ReadStereoCalibParams( string &img_xml )
 	BoardSize = Size((int)fs["BoardSizeWidth"], (int)fs["BoardSizeHeight"]);
 	SquareSize = (float)fs["SquareSize"];
 
-	BoardTexSize = Size(SquareSize*BoardSize.width, SquareSize*BoardSize.height);
+	BoardTexWdith = SquareSize*BoardSize.width;
+	BoardTexHeight = SquareSize*BoardSize.height;
 
 	FileNode left_imgs = fs["LeftImages"];
 	for(FileNodeIterator itr = left_imgs.begin(); itr != left_imgs.end(); itr++)
@@ -577,6 +579,8 @@ void CameraCalibration::InitPangolin(int PanelWidth)
 	}
 
 	InitTexture();
+
+	glutSpecialFunc(&SpecialKeyFunction);
 }
 
 void CameraCalibration::DrawChessboardAndImage(int c_idx, int img_idx, bool is_undistorted, bool is_stereobind)
@@ -615,7 +619,7 @@ void CameraCalibration::DrawChessboardAndImage(int c_idx, int img_idx, bool is_u
 	}
 
 	DrawAxis();
-	gl_chessboard_tex->RenderPlanTexture3D(getBoardTexSize().width, getBoardTexSize().height);
+	gl_chessboard_tex->RenderPlanTexture3D(BoardTexWdith, BoardTexHeight);
 
 }
 
