@@ -198,7 +198,7 @@ void CameraCalibration::WriteCalibParams()
     char buf[1024];
     strftime(buf, sizeof(buf)-1, "%c", t2 );
 
-    FileStorage fs("calib_result.xml", FileStorage::WRITE);
+    FileStorage fs(data_path+"/calib_result.xml", FileStorage::WRITE);
 
     fs << "calibration_Time" << buf;
     fs << "NumOfFrames" << NumFrames;
@@ -207,15 +207,28 @@ void CameraCalibration::WriteCalibParams()
     fs << "BoardWidth" << BoardSize.width;
     fs << "BoardHeight" << BoardSize.height;
     fs << "SquareSize" << SquareSize;
+	if(stereo_mode)
+	{
+		fs << "CameraType" << "stereo";
 
-    fs << "LeftCameraMatrix" << calib_params[0].CameraMatrix;
-    fs << "LeftCameraDistortion" << calib_params[0].DistCoeffs;
+		fs << "LeftCameraMatrix" << calib_params[0].CameraMatrix;
+		fs << "LeftCameraDistortion" << calib_params[0].DistCoeffs;
+
+		fs << "RightCameraMatrix" << calib_params[1].CameraMatrix;
+		fs << "RightCameraDistortion" << calib_params[1].DistCoeffs;
+
+		fs << "LeftToRightRotation" << stereo_params->R;
+		fs << "LeftToRightTranslation" << stereo_params->T;
+	}
+	else
+	{
+		fs << "CameraType" << "mono";
+
+		fs << "CameraMatrix" << calib_params[0].CameraMatrix;
+		fs << "CameraDistortion" << calib_params[0].DistCoeffs;
+	}
+
 	
-	fs << "RightCameraMatrix" << calib_params[1].CameraMatrix;
-	fs << "RightCameraDistortion" << calib_params[1].DistCoeffs;
-
-	fs << "LeftToRightRotation" << stereo_params->R;
-	fs << "LeftToRightTranslation" << stereo_params->T;
 }
 
 void CameraCalibration::MonoCalibration()
@@ -408,7 +421,7 @@ void CameraCalibration::StereoCalibration()
 		&rect_params->LeftRoi, 
 		&rect_params->RightRoi);
 
-	cout << "\nStereo rectification using calibration spent: " << PangolinTimer.ElapsedInMilliSec() << "ms." << endl;
+	cout << "\nStereo rectification using calibration spent: " << PangolinTimer.getElapsedTimeInMilliSec() << "ms." << endl;
 
 	rect_params->isVerticalStereo = fabs(rect_params->RightProj.at<double>(1, 3)) > 
 										fabs(rect_params->RightProj.at<double>(0, 3));
