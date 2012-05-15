@@ -8,20 +8,29 @@
 #
 
 IF(MSVC)
-        FIND_PATH(PANGOLIN_INCLUDE_DIR pangolin/pangolin.h 
-                                       ../../Libraries/Pangolin/include)
-        FIND_LIBRARY(PANGOLIN_LIB_RELEASE 
+   FIND_PATH(PANGOLIN_INCLUDE_DIR pangolin/pangolin.h 
+                                 ../Libraries/Pangolin/include)
+   IF(CMAKE_CL_64)
+      FIND_LIBRARY(PANGOLIN_LIB_RELEASE 
                      NAMES pangolin 
-                     PATHS ../../Libraries/Pangolin/lib/Release)
-        FIND_LIBRARY(PANGOLIN_LIB_DEBUG 
+                     PATHS ../Libraries/Pangolin/lib/x64/Release)
+      FIND_LIBRARY(PANGOLIN_LIB_DEBUG 
                      NAMES pangolind 
-                     PATHS ../../Libraries/Pangolin/lib/Debug)
+                     PATHS ../Libraries/Pangolin/lib/x64/Debug)
+   ELSE(CMAKE_CL_64)
+      FIND_LIBRARY(PANGOLIN_LIB_RELEASE 
+                     NAMES pangolin 
+                     PATHS ../Libraries/Pangolin/lib/x86/Release)
+      FIND_LIBRARY(PANGOLIN_LIB_DEBUG 
+                     NAMES pangolind 
+                     PATHS ../Libraries/Pangolin/lib/x86/Debug)
+   ENDIF(CMAKE_CL_64)
 ELSE(MSVC)
 
         FIND_PATH(Pangolin_INCLUDE_DIR pangolin/pangolin.h 
-                                       ../../Pangolin/include)
+                                       ../Pangolin/include)
         FIND_LIBRARY(Pangolin_LIBRARY pangolin 
-                                      ../../Pangolin/lib)
+                                      ../Pangolin/lib)
 
 
 ENDIF(MSVC)
