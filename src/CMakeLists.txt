@@ -4,7 +4,6 @@ SET(CAMERACALIBRATION_VERSION_MINOR 1)
 
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/CMakeModules/)
 OPTION(USE_SHARED_LIB "Link shared libraries" ON)
 
 IF(MSVC)
@@ -19,35 +18,18 @@ ENDIF(Boost_FOUND)
 
 FIND_PACKAGE(OpenGL REQUIRED)
 
-FIND_PACKAGE(GLEW REQUIRED)
-IF(GLEW_FOUND)
-    SET(HAVE_GLEW 1)
-    #   IF(MSVC)
-    #   ADD_DEFINITIONS(-DGLEW_STATIC)
-    #   ENDIF(MSVC)
-    MESSAGE("GLEW Found and Enabled")
-ENDIF(GLEW_FOUND)
-
-FIND_PACKAGE(FREEGLUT REQUIRED)
-IF(FREEGLUT_FOUND)
-   SET(HAVE_GLUT 1)
-   #IF(MSVC)
-   #   ADD_DEFINITIONS(-DFREEGLUT_STATIC)
-   #ENDIF(MSVC)
-   MESSAGE("Freeglut Found and Enabled")
-ENDIF(FREEGLUT_FOUND)
-
+###############################################################################
+# Pangolin: https://github.com/pinglin/Pangolin.git
 FIND_PACKAGE(Pangolin REQUIRED)
-IF(Pangolin_FOUND)
-    SET(HAVE_PANGOLIN 1)
-    MESSAGE("Pangolin Found and Enabled")
-ENDIF(Pangolin_FOUND)
+INCLUDE_DIRECTORIES(${Pangolin_INCLUDE_DIRS})
+LINK_DIRECTORIES(${Pangolin_LIBRARY_DIRS})
+LINK_LIBRARIES(${Pangolin_LIBRARIES})
 
+###############################################################################
+# OpenCV: http://opencv.willowgarage.com/wiki/
 FIND_PACKAGE(OpenCV REQUIRED)
-IF(OpenCV_FOUND)
-    SET(HAVE_OPENCV 1)
-    MESSAGE("OpenCV Found and Enabled")
-ENDIF(OpenCV_FOUND)
+INCLUDE_DIRECTORIES(${OpenCV_INCLUDE_DIR})
+LINK_LIBRARIES(${OpenCV_LIBS})
 
 # Overide with cmake -DCMAKE_BUILD_TYPE=Debug {dir}
 IF( NOT CMAKE_BUILD_TYPE )
@@ -75,12 +57,4 @@ ENDIF(MSVC)
 #ENDIF(MSVC)
 
 ADD_EXECUTABLE(opencv_calib opencv_calib.cpp)
-TARGET_LINK_LIBRARIES(opencv_calib ${OpenCV_LIBS})
-
 ADD_EXECUTABLE(CameraClibrator CameraCalibrator.cpp CameraCalibrator.h)
-INCLUDE_DIRECTORIES(CameraClibrator ${PANGOLIN_INCLUDE_DIR}
-                                 ${FREEGLUT_INCLUDE_DIR} 
-                                 ${GLEW_INCLUDE_DIR} 
-                                 ${Boost_INCLUDE_DIRS}
-                                 ${OpenCV_INCLUDE_DIR})
-TARGET_LINK_LIBRARIES(CameraClibrator ${OpenCV_LIBS} ${PANGOLIN_LIBRARY} ${Boost_LIBRARIES} ${GLEW_LIBRARY} ${FREEGLUT_LIBRARY})

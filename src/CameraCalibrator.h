@@ -4,9 +4,10 @@
 #include <sstream>
 #include <time.h>
 
-#include <pangolin/pangolin.h>
-#include <pangolin/simple_math.h>
-#include <pangolin/timer.h>
+
+#include <Pangolin/Pangolin.h>
+#include <Pangolin/simple_math.h>
+#include <Pangolin/timer.h>
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -15,7 +16,7 @@
 
 using namespace cv;
 using namespace std;
-using namespace pangolin;
+using namespace Pangolin;
 
 struct CalibParams
 {
@@ -71,7 +72,7 @@ public:
 
 	void CvtCameraExtrins(const vector<Mat> *RVecs, const vector<Mat> *TVecs);
 
-    void InitPangolin(int PanelWidth);    
+    void InitPangolin(int PanelWidth);
 
     OpenGlMatrixSpec StereoBind(const OpenGlMatrixSpec &LeftCamera);    
 
@@ -86,13 +87,13 @@ public:
 	RectifiedParams *rect_params;
 
     View *panel, *view[2];
-	pangolin::GlTexture *gl_img_tex, *gl_chessboard_tex;
+    Pangolin::GlTexture *gl_img_tex, *gl_chessboard_tex;
 
 	inline void setStereoMode(bool isStereoMode) { stereo_mode = isStereoMode; }
 
 	inline int getNumFrames() const { return NumFrames; }
 
-	// Pangolin matrix
+    // Pangolin matrix
 	OpenGlMatrixSpec *CamIntrins;  // Row-major order
 	vector<OpenGlMatrixSpec> *CamExtrins;  // Row-major order
 	OpenGlMatrixSpec L2RExtrins;	// For stereo mode
@@ -108,7 +109,7 @@ private:
 	float SquareSize;          // The size of a square in your defined unit (point, millimeter,etc).	
 	Size ImageSize;
 
-	// Pangolin OpenGL texture
+    // Pangolin OpenGL texture
 	float BoardTexWdith, BoardTexHeight;	// OpenGL texture for the chessboard rendering
 
 	void CheckImageSizeConsistency();

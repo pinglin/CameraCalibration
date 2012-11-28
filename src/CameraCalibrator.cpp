@@ -42,7 +42,7 @@ int main( int argc, char* argv[])
 		num_frames = camera_calib.getNumFrames();
 
 		camera_calib.StereoCalibration();
-		camera_calib.InitPangolin(150);
+        camera_calib.InitPangolin(150);
     
 		static Var<int> img_idx("ui.Image: ", 0, 0, camera_calib.getNumFrames()-1);
 		static Var<bool> is_stereobind("ui.Stereo Bind", false, true);
@@ -51,9 +51,9 @@ int main( int argc, char* argv[])
 		//static Var<bool> disp_button("ui.Show OpenCV SBM", false, false);
 		static Var<bool> export_button("ui.Export Results", false, false);
 
-		while( !pangolin::ShouldQuit() )
+        while( !Pangolin::ShouldQuit() )
 		{
-			if(pangolin::HasResized())
+            if(Pangolin::HasResized())
 				DisplayBase().ActivateScissorAndClear();
 
 			show_idx = (int*)img_idx.var->val;
@@ -397,10 +397,10 @@ void CameraCalibration::StereoCalibration()
 		calib_params[0].CameraMatrix, calib_params[1].CameraMatrix, 
 		calib_params[0].DistCoeffs, calib_params[1].DistCoeffs, stereo_params->F) << endl;        
 
-	// Transfer matrix from OpenCV Mat to Pangolin matrix
+    // Transfer matrix from OpenCV Mat to Pangolin matrix
 	CvtCameraExtrins(RVecs, TVecs);
 	
-	Timer PangolinTimer;
+    Timer PangolinTimer;
 
 	// Stereo rectification
 	stereoRectify(calib_params[0].CameraMatrix,
@@ -421,7 +421,7 @@ void CameraCalibration::StereoCalibration()
 		&rect_params->LeftRoi, 
 		&rect_params->RightRoi);
 
-	cout << "\nStereo rectification using calibration spent: " << PangolinTimer.getElapsedTimeInMilliSec() << "ms." << endl;
+    cout << "\nStereo rectification using calibration spent: " << PangolinTimer.getElapsedTimeInMilliSec() << "ms." << endl;
 
 	rect_params->isVerticalStereo = fabs(rect_params->RightProj.at<double>(1, 3)) > 
 										fabs(rect_params->RightProj.at<double>(0, 3));
@@ -644,7 +644,7 @@ void CameraCalibration::DrawChessboardAndImage(const int c_idx, const int img_id
 	}
 
 	DrawAxis();
-	gl_chessboard_tex->RenderPlanTexture3D(BoardTexWdith, BoardTexHeight);
+    gl_chessboard_tex->Render3DPlanTexture(BoardTexWdith, BoardTexHeight);
 
 }
 
@@ -717,12 +717,12 @@ void CameraCalibration::InitTexture()
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 
 	// Texture for chessboard	
-	gl_chessboard_tex = new pangolin::GlTexture(8*BoardSize.width, 8*BoardSize.height, GL_RGBA);
+    gl_chessboard_tex = new Pangolin::GlTexture(8*BoardSize.width, 8*BoardSize.height, GL_RGBA);
 	gl_chessboard_tex->Upload(checkImage, GL_RGBA, GL_UNSIGNED_BYTE);    
 	delete [] checkImage;
 
 	// Texture for image
-	gl_img_tex = new pangolin::GlTexture(ImageSize.width, ImageSize.height, GL_RGB);
+    gl_img_tex = new Pangolin::GlTexture(ImageSize.width, ImageSize.height, GL_RGB);
 
 }
 
